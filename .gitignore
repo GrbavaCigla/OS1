@@ -67,3 +67,8 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# lib exceptions
+!/lib/console.lib
+!/lib/mem.lib
+!/lib/hw.lib
