@@ -2,7 +2,6 @@
 #include "../lib/hw.h"
 
 int main() {
-    __putc('b');
     
     while (true) {
         

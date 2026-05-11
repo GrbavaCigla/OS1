@@ -1,0 +1,79 @@
+#include "../h/allocator.hpp"
+#include "../h/helper.hpp"
+
+MemoryAllocator::MemoryAllocator() {
+	size_t start = ALIGN_UP((size_t)HEAP_START_ADDR, MEM_BLOCK_SIZE);
+	size_t end = (size_t)HEAP_END_ADDR;
+
+	this->head = (FreeChunkNode*)start;
+	this->head->blocks = (end - start) / MEM_BLOCK_SIZE;
+	this->head->next = nullptr;
+	this->head->prev = nullptr;
+}
+
+size_t MemoryAllocator::allocate(size_t blocks) {
+	blocks++;
+
+	FreeChunkNode* ff = this->head;
+	while (ff && ff->blocks < blocks)
+		ff = ff->next;
+
+	if (!ff)
+		return 0;
+
+	ff->blocks -= blocks;
+	size_t start = (size_t)ff + ff->blocks * MEM_BLOCK_SIZE;
+
+	if (ff->blocks == 0) {
+		if (ff->prev)
+			ff->prev->next = ff->next;
+		if (ff->next)
+			ff->next->prev = ff->prev;
+		if (this->head == ff)
+			this->head = ff->next;
+	}
+
+	AllocationHeader* ah = (AllocationHeader*)start;
+	ah->blocks = blocks;
+
+	return start + MEM_BLOCK_SIZE;
+}
+
+void MemoryAllocator::free(size_t ptr) {
+	if (!ptr)
+		return;
+
+	AllocationHeader* ah = (AllocationHeader*)(ptr - MEM_BLOCK_SIZE);
+	FreeChunkNode* newNode = (FreeChunkNode*)ah;
+	newNode->blocks = ah->blocks;
+
+	FreeChunkNode* cur = this->head;
+	FreeChunkNode* prev = nullptr;
+	while (cur && cur < newNode) {
+		prev = cur;
+		cur = cur->next;
+	}
+
+	newNode->next = cur;
+	newNode->prev = prev;
+
+	if (prev) prev->next = newNode;
+	else this->head = newNode;
+
+	if (cur) cur->prev = newNode;
+
+	this->join(newNode);
+	this->join(newNode->prev);
+}
+
+void MemoryAllocator::join(FreeChunkNode* node) {
+	if (!node)
+		return;
+
+	size_t next = (size_t)node + node->blocks * MEM_BLOCK_SIZE;
+	if (node->next && (FreeChunkNode*)next == node->next) {
+		node->blocks += node->next->blocks;
+		node->next = node->next->next;
+		if (node->next) node->next->prev = node;
+	}
+}
