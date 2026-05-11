@@ -17,7 +17,7 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 project(kernel LANGUAGES ASM C CXX)
 
-set(MARCH rv64ima)
+set(MARCH rv64ima_zicsr)
 set(MABI  lp64)
 
 set(COMMON_FLAGS

@@ -1,3 +1,5 @@
+#include "../h/helper.hpp"
+
 #include "../lib/console.h"
 
 void printInt(unsigned long int x) {
@@ -11,7 +13,6 @@ void printInt(unsigned long int x) {
 		__putc(b % 10 + '0');
 		b /= 10;
 	} while (b != 0);
-	__putc('\n');
 }
 
 void printStr(const char* s) {
@@ -20,5 +21,4 @@ void printStr(const char* s) {
 		__putc(*(s + i));
 		i++;
 	}
-	__putc('\n');
 }
