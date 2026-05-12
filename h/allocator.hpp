@@ -2,6 +2,8 @@
 
 #include "../lib/hw.h"
 
+#define NEXT_CHK(node) (((size_t)(node)) + (node)->blocks * MEM_BLOCK_SIZE)
+
 class MemoryAllocator {
   public:
 	static MemoryAllocator& getInstance() {
@@ -13,7 +15,7 @@ class MemoryAllocator {
 	MemoryAllocator& operator=(const MemoryAllocator&) = delete;
 
 	size_t allocate(size_t);
-    void free(size_t);
+	int free(size_t);
 
   private:
 	MemoryAllocator();
@@ -25,11 +27,11 @@ class MemoryAllocator {
 		FreeChunkNode* next;
 	};
 
-    struct AllocationHeader {
-        size_t blocks;
-    };
+	struct AllocationHeader {
+		size_t blocks;
+	};
 
 	FreeChunkNode* head;
 
-    void join(FreeChunkNode*);
+	void join(FreeChunkNode*);
 };
