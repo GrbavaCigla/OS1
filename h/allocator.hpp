@@ -29,6 +29,7 @@ class MemoryAllocator {
 
 	struct AllocationHeader {
 		size_t blocks;
+		size_t next;
 	};
 
 	FreeChunkNode* head;

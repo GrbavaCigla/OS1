@@ -35,6 +35,7 @@ size_t MemoryAllocator::allocate(size_t blocks) {
 
 	AllocationHeader* ah = (AllocationHeader*)start;
 	ah->blocks = blocks;
+	ah->next = start + MEM_BLOCK_SIZE;
 
 	return start + MEM_BLOCK_SIZE;
 }
@@ -44,6 +45,8 @@ int MemoryAllocator::free(size_t ptr) {
 		return -1;
 
 	AllocationHeader* ah = (AllocationHeader*)(ptr - MEM_BLOCK_SIZE);
+	if (ah->next != ptr)
+		return -2;
 	FreeChunkNode* newNode = (FreeChunkNode*)ah;
 	newNode->blocks = ah->blocks;
 
