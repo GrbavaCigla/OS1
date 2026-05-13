@@ -1,8 +1,10 @@
 #include "../h/allocator.hpp"
 #include "../h/helper.hpp"
 
+namespace Kernel {
+
 MemoryAllocator::MemoryAllocator() {
-	size_t start = ALIGN_UP((size_t)HEAP_START_ADDR, MEM_BLOCK_SIZE);
+	size_t start = Helper::align_up((size_t)HEAP_START_ADDR, MEM_BLOCK_SIZE);
 	size_t end = (size_t)HEAP_END_ADDR;
 
 	this->head = (FreeChunkNode*)start;
@@ -22,7 +24,7 @@ size_t MemoryAllocator::allocate(size_t blocks) {
 		return 0;
 
 	ff->blocks -= blocks;
-	size_t start = NEXT_CHK(ff);
+	size_t start = next_chunk(ff);
 
 	if (ff->blocks == 0) {
 		if (ff->prev)
@@ -76,7 +78,7 @@ void MemoryAllocator::join(FreeChunkNode* node) {
 	if (!node)
 		return;
 
-	size_t next = NEXT_CHK(node);
+	size_t next = next_chunk(node);
 	if (node->next && (FreeChunkNode*)next == node->next) {
 		node->blocks += node->next->blocks;
 		node->next = node->next->next;
@@ -84,3 +86,5 @@ void MemoryAllocator::join(FreeChunkNode* node) {
 			node->next->prev = node;
 	}
 }
+
+} // namespace Kernel

@@ -1,13 +1,12 @@
+#include "../h/sys.hpp"
 #include "../lib/console.h"
 #include "../lib/hw.h"
-#include "../h/trap.hpp"
 
 int main() {
-    registerSupervisorTrap();
-    
-    while (true) {
-        
-    }
+	Kernel::Sys::init();
 
-    return 0;
+	while (true) {
+	}
+
+	return 0;
 }

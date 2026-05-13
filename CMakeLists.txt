@@ -44,7 +44,7 @@ add_compile_options("$<$<COMPILE_LANGUAGE:ASM>:-ggdb>")
 
 add_compile_options("$<$<COMPILE_LANGUAGE:C>:${COMMON_FLAGS}>")
 add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:${COMMON_FLAGS}>")
-add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-std=c++11>")
+add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-std=c++17>")
 add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>")
 add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-fno-threadsafe-statics>")
 add_compile_definitions(DEBUG_PRINT=0)

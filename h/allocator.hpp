@@ -2,7 +2,7 @@
 
 #include "../lib/hw.h"
 
-#define NEXT_CHK(node) (((size_t)(node)) + (node)->blocks * MEM_BLOCK_SIZE)
+namespace Kernel {
 
 class MemoryAllocator {
   public:
@@ -35,4 +35,10 @@ class MemoryAllocator {
 	FreeChunkNode* head;
 
 	void join(FreeChunkNode*);
+
+	static inline size_t next_chunk(FreeChunkNode* node) {
+		return reinterpret_cast<size_t>(node) + (node->blocks * MEM_BLOCK_SIZE);
+	}
 };
+
+} // namespace Kernel
