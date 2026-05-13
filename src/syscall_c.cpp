@@ -3,19 +3,23 @@
 #include "../h/sys.hpp"
 
 extern "C" {
-void* mem_alloc(size_t size) {
-	size = Kernel::Helper::round_up(size, MEM_BLOCK_SIZE);
 
-	Kernel::Sys::A0::write((uint64)Kernel::Sys::SyscallCode::MemoryAllocate);
-	Kernel::Sys::A1::write(size);
-	Kernel::Sys::ecall();
-	return (void*)Kernel::Sys::A0::read();
+using namespace Kernel::Sys;
+using namespace Kernel::Helper;
+
+void* mem_alloc(size_t size) {
+	size = round_up(size, MEM_BLOCK_SIZE);
+
+	A0::write((uint64)SyscallCode::MemoryAllocate);
+	A1::write(size);
+	ecall();
+	return (void*)A0::read();
 }
 
 int mem_free(void* ptr) {
-	Kernel::Sys::A0::write((uint64)Kernel::Sys::SyscallCode::MemoryFree);
-	Kernel::Sys::A1::write((uint64)ptr);
-	Kernel::Sys::ecall();
-	return (int)Kernel::Sys::A0::read();
+	A0::write((uint64)SyscallCode::MemoryFree);
+	A1::write((uint64)ptr);
+	ecall();
+	return (int)A0::read();
 }
 }
