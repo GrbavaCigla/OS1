@@ -4,7 +4,7 @@
 namespace kernel {
 
 MemoryAllocator::MemoryAllocator() {
-	size_t start = helper::align_up((size_t)HEAP_START_ADDR, MEM_BLOCK_SIZE);
+	size_t start = helper::alignUp((size_t)HEAP_START_ADDR, MEM_BLOCK_SIZE);
 	size_t end = (size_t)HEAP_END_ADDR;
 
 	this->head = (FreeChunkNode*)start;
@@ -24,7 +24,7 @@ size_t MemoryAllocator::allocate(size_t blocks) {
 		return 0;
 
 	ff->blocks -= blocks;
-	size_t start = next_chunk(ff);
+	size_t start = nextChunk(ff);
 
 	if (ff->blocks == 0) {
 		if (ff->prev)
@@ -78,7 +78,7 @@ void MemoryAllocator::join(FreeChunkNode* node) {
 	if (!node)
 		return;
 
-	size_t next = next_chunk(node);
+	size_t next = nextChunk(node);
 	if (node->next && (FreeChunkNode*)next == node->next) {
 		node->blocks += node->next->blocks;
 		node->next = node->next->next;

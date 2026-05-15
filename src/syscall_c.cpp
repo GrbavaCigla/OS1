@@ -8,7 +8,7 @@ using namespace kernel::sys;
 using namespace kernel::helper;
 
 void* mem_alloc(size_t size) {
-	size = round_up(size, MEM_BLOCK_SIZE);
+	size = roundUp(size, MEM_BLOCK_SIZE);
 
 	A0::write((uint64)SyscallCode::MemoryAllocate);
 	A1::write(size);

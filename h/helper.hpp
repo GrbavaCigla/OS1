@@ -5,11 +5,11 @@
 
 namespace kernel::helper {
 
-template <typename T> constexpr T align_up(T x, T size) {
+template <typename T> constexpr T alignUp(T x, T size) {
 	return (x + size - 1) & ~(size - 1);
 }
 
-template <typename T> constexpr T round_up(T n, T d) { return (n + d - 1) / d; }
+template <typename T> constexpr T roundUp(T n, T d) { return (n + d - 1) / d; }
 
 void print(const char*);
 

@@ -36,7 +36,7 @@ class MemoryAllocator {
 
 	void join(FreeChunkNode*);
 
-	static inline size_t next_chunk(FreeChunkNode* node) {
+	static inline size_t nextChunk(FreeChunkNode* node) {
 		return reinterpret_cast<size_t>(node) + (node->blocks * MEM_BLOCK_SIZE);
 	}
 };
