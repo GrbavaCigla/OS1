@@ -2,7 +2,7 @@
 
 #include "../lib/console.h"
 
-namespace Kernel::Helper {
+namespace kernel::helper {
 
 void print(const char* s) {
 	int i = 0;
@@ -12,4 +12,4 @@ void print(const char* s) {
 	}
 }
 
-} // namespace Kernel::Helper
+} // namespace kernel::helper

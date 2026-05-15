@@ -1,10 +1,10 @@
 #include "../h/allocator.hpp"
 #include "../h/helper.hpp"
 
-namespace Kernel {
+namespace kernel {
 
 MemoryAllocator::MemoryAllocator() {
-	size_t start = Helper::align_up((size_t)HEAP_START_ADDR, MEM_BLOCK_SIZE);
+	size_t start = helper::align_up((size_t)HEAP_START_ADDR, MEM_BLOCK_SIZE);
 	size_t end = (size_t)HEAP_END_ADDR;
 
 	this->head = (FreeChunkNode*)start;
@@ -87,4 +87,4 @@ void MemoryAllocator::join(FreeChunkNode* node) {
 	}
 }
 
-} // namespace Kernel
+} // namespace kernel

@@ -37,7 +37,7 @@ extern "C" void supervisorTrap();
 
 extern "C" void handleSupervisorTrap();
 
-namespace Kernel::Sys {
+namespace kernel::sys {
 
 enum class SCauseCode : uint64 {
 	SoftwareTimer = (1ul << 63) | 1,
@@ -78,25 +78,25 @@ STATUS_ACCESSOR(SCause, scause, SCauseCode, uint64)
 inline void ecall() { __asm__ volatile("ecall"); }
 
 inline void init() {
-	Sys::STVec::write((uint64)&supervisorTrap);
-	Sys::SStatus::set(Sys::SStatusBitmask::SIE);
+	sys::STVec::write((uint64)&supervisorTrap);
+	sys::SStatus::set(sys::SStatusBitmask::SIE);
 }
 
 inline void handleSyscall() {
-	Sys::SyscallCode code = (Sys::SyscallCode)Sys::A0::read();
+	sys::SyscallCode code = (sys::SyscallCode)sys::A0::read();
 	uint64 ret = 0;
-	uint64 args[] = {Sys::A1::read()};
+	uint64 args[] = {sys::A1::read()};
 
 	switch (code) {
-	case Sys::SyscallCode::MemoryAllocate:
+	case sys::SyscallCode::MemoryAllocate:
 		ret = MemoryAllocator::getInstance().allocate(args[0]);
 		break;
-	case Sys::SyscallCode::MemoryFree:
+	case sys::SyscallCode::MemoryFree:
 		ret = MemoryAllocator::getInstance().free(args[0]);
 		break;
 	}
 
-	Sys::A0::write(ret);
+	sys::A0::write(ret);
 }
 
-} // namespace Kernel::Sys
+} // namespace kernel::sys

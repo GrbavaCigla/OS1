@@ -2,7 +2,7 @@
 #include "../h/helper.hpp"
 #include "../lib/console.h"
 
-namespace Kernel::Sys {
+namespace kernel::sys {
 extern "C" void handleSupervisorTrap() {
 	SCauseCode scause = SCause::read();
 
@@ -13,11 +13,11 @@ extern "C" void handleSupervisorTrap() {
 	case SCauseCode::IllegalInstruction:
 	case SCauseCode::LoadAccessFault:
 	case SCauseCode::StoreAccessFault:
-		Helper::print("other");
+		helper::print("other");
 		break;
 	case SCauseCode::UserSyscall:
 	case SCauseCode::SuperSyscall:
-		Helper::print("syscall");
+		helper::print("syscall");
 		SEPC::write(SEPC::read() + 4);
 		handleSyscall();
 		break;
@@ -27,4 +27,4 @@ extern "C" void handleSupervisorTrap() {
 }
 
 extern "C" void supervisorTrap();
-} // namespace Kernel::Sys
+} // namespace kernel::sys

@@ -4,8 +4,8 @@
 
 extern "C" {
 
-using namespace Kernel::Sys;
-using namespace Kernel::Helper;
+using namespace kernel::sys;
+using namespace kernel::helper;
 
 void* mem_alloc(size_t size) {
 	size = round_up(size, MEM_BLOCK_SIZE);

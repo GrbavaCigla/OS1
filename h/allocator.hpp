@@ -2,7 +2,7 @@
 
 #include "../lib/hw.h"
 
-namespace Kernel {
+namespace kernel {
 
 class MemoryAllocator {
   public:
@@ -41,4 +41,4 @@ class MemoryAllocator {
 	}
 };
 
-} // namespace Kernel
+} // namespace kernel

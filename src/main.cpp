@@ -3,7 +3,7 @@
 #include "../lib/hw.h"
 
 int main() {
-	Kernel::Sys::init();
+	kernel::sys::init();
 
 	while (true) {
 	}

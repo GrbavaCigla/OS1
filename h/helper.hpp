@@ -3,7 +3,7 @@
 #include "../lib/console.h"
 #include "../lib/hw.h"
 
-namespace Kernel::Helper {
+namespace kernel::helper {
 
 template <typename T> constexpr T align_up(T x, T size) {
 	return (x + size - 1) & ~(size - 1);
@@ -26,4 +26,4 @@ template <typename T> void print(T x) {
 	} while (b != 0);
 }
 
-} // namespace Kernel::Helper
+} // namespace kernel::helper
