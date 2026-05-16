@@ -64,12 +64,17 @@ enum class SStatusBitmask : uint64 {
 	SPP = (1 << 8),
 };
 
+enum class SIPBitmask : uint64 {
+	SSIP = (1 << 1),
+};
+
 REGISTER_ACCESSOR(A0, a0)
 REGISTER_ACCESSOR(A1, a1)
 // REGISTER_ACCESSOR(RA, ra)
 
 STATUS_ACCESSOR(STVec, stvec, uint64, uint64)
 STATUS_ACCESSOR(SStatus, sstatus, uint64, SStatusBitmask)
+STATUS_ACCESSOR(SIP, sip, uint64, SIPBitmask)
 STATUS_ACCESSOR(SEPC, sepc, uint64, uint64)
 STATUS_ACCESSOR(SCause, scause, SCauseCode, uint64)
 

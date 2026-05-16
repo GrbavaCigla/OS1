@@ -21,17 +21,29 @@ Thread::Thread()
 
 void Thread::wrapper() {
 	Thread* thread = Scheduler::getInstance().current();
-	sys::enterUserspace();
 	thread->function();
 	thread->status = Status::Finished;
+	Thread::dispatch();
+	while (true) {
+		Thread::dispatch();
+	}
 }
 
 void Thread::dispatch() {
 	Scheduler& scheduler = Scheduler::getInstance();
 	Thread* oldThread = scheduler.current();
-	scheduler.next();
 	Thread* newThread = scheduler.current();
+
+	do {
+		scheduler.next();
+		newThread = scheduler.current();
+	} while (newThread && newThread != oldThread &&
+			 newThread->status == Status::Finished);
+
 	if (oldThread == newThread || !oldThread || !newThread) {
+		return;
+	}
+	if (newThread->status == Status::Finished) {
 		return;
 	}
 

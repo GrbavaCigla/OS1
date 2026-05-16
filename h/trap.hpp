@@ -26,10 +26,7 @@ inline void handleTimer() {
 	ticks++;
 	if (ticks >= DEFAULT_TIME_SLICE) {
 		ticks = 0;
-		// Scheduler& s = Scheduler::getInstance();
-		// Thread* prev = s.current();
-		// s.next();
-		// Thread* next = s.current();
+		Thread::dispatch();
 	}
 }
 

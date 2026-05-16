@@ -1,5 +1,4 @@
 #include "../h/sys.hpp"
-#include "../h/helper.hpp"
 #include "../h/trap.hpp"
 #include "../lib/console.h"
 
@@ -9,6 +8,8 @@ extern "C" void handleSupervisorTrap() {
 
 	switch (scause) {
 	case SCauseCode::SoftwareTimer:
+		SIP::clear(SIPBitmask::SSIP);
+		handleTimer();
 		break;
 	case SCauseCode::Hardware:
 	case SCauseCode::IllegalInstruction:
@@ -34,14 +35,16 @@ void enterUserspace() {
 	__asm__ volatile("sret");
 }
 
-void contextSwitch(Thread::Context* oldContext, Thread::Context* newContext) {
-	__asm__ volatile("sd ra, %0\n"
-					 "sd sp, %1\n"
-					 "ld ra, %2\n"
-					 "ld sp, %3\n"
+void __attribute__((naked))
+contextSwitch(Thread::Context* oldContext, Thread::Context* newContext) {
+	__asm__ volatile("sd ra, %c0(a0)\n"
+					 "sd sp, %c1(a0)\n"
+					 "ld ra, %c0(a1)\n"
+					 "ld sp, %c1(a1)\n"
+					 "ret"
 					 :
-					 : "m"(oldContext->ra), "m"(newContext->sp),
-					   "m"(oldContext->ra), "m"(newContext->sp));
+					 : "i"(__builtin_offsetof(Thread::Context, ra)),
+					   "i"(__builtin_offsetof(Thread::Context, sp)));
 }
 
 } // namespace kernel::sys
