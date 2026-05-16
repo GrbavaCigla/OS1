@@ -90,6 +90,16 @@ set_target_properties(kernel PROPERTIES
     SUFFIX ""
 )
 
+set(GDB_SYMBOL_FILE_DIR ${CMAKE_SOURCE_DIR}/kernel)
+set(GDB_SYMBOL_FILE     ${GDB_SYMBOL_FILE_DIR}/kernel)
+
+add_custom_command(
+    TARGET kernel POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${GDB_SYMBOL_FILE_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:kernel> ${GDB_SYMBOL_FILE}
+    COMMENT "Copying GDB symbol file to ${GDB_SYMBOL_FILE}"
+)
+
 set(QEMU qemu-system-riscv64)
 set(QEMU_OPTS
     -machine virt

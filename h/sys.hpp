@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../h/allocator.hpp"
 #include "../lib/hw.h"
+#include "thread.hpp"
 
 #define REGISTER_ACCESSOR(name, reg)                                           \
 	struct name {                                                              \
@@ -33,6 +33,9 @@
 		}                                                                      \
 	};
 
+#define INSTRUCTION(name)                                                      \
+	inline void name() { __asm__ volatile(#name); }
+
 extern "C" void supervisorTrap();
 
 extern "C" void handleSupervisorTrap();
@@ -63,40 +66,24 @@ enum class SStatusBitmask : uint64 {
 
 REGISTER_ACCESSOR(A0, a0)
 REGISTER_ACCESSOR(A1, a1)
-REGISTER_ACCESSOR(A2, a2)
-REGISTER_ACCESSOR(A3, a3)
-REGISTER_ACCESSOR(A4, a4)
-REGISTER_ACCESSOR(A5, a5)
-REGISTER_ACCESSOR(A6, a6)
-REGISTER_ACCESSOR(A7, a7)
+// REGISTER_ACCESSOR(RA, ra)
 
 STATUS_ACCESSOR(STVec, stvec, uint64, uint64)
 STATUS_ACCESSOR(SStatus, sstatus, uint64, SStatusBitmask)
 STATUS_ACCESSOR(SEPC, sepc, uint64, uint64)
 STATUS_ACCESSOR(SCause, scause, SCauseCode, uint64)
 
-inline void ecall() { __asm__ volatile("ecall"); }
+INSTRUCTION(sret)
+INSTRUCTION(ecall)
 
 inline void init() {
 	sys::STVec::write((uint64)&supervisorTrap);
 	sys::SStatus::set(sys::SStatusBitmask::SIE);
 }
 
-inline void handleSyscall() {
-	sys::SyscallCode code = (sys::SyscallCode)sys::A0::read();
-	uint64 ret = 0;
-	uint64 args[] = {sys::A1::read()};
+void enterUserspace();
 
-	switch (code) {
-	case sys::SyscallCode::MemoryAllocate:
-		ret = MemoryAllocator::getInstance().allocate(args[0]);
-		break;
-	case sys::SyscallCode::MemoryFree:
-		ret = MemoryAllocator::getInstance().free(args[0]);
-		break;
-	}
+void contextSwitch(Thread::Context*, Thread::Context*);
 
-	sys::A0::write(ret);
-}
 
 } // namespace kernel::sys
