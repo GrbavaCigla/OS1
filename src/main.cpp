@@ -6,28 +6,19 @@
 #include "../lib/hw.h"
 
 void func1() {
-	volatile int a = 10;
-	volatile int b = 20;
-	volatile int c = a + b;
-	volatile int d = a - c - b;
-	(void)a;
-	(void)b;
-	(void)c;
-	(void)d;
-	kernel::helper::print("kita1");
+    while (true) {
+        kernel::helper::print("1");
+        for (volatile int i = 0; i < 10000000; i++);
+    }
 }
 
 void func2() {
-	volatile int a = 100;
-	volatile int b = 200;
-	volatile int c = a + b;
-	volatile int d = a - c - b;
-	(void)a;
-	(void)b;
-	(void)c;
-	(void)d;
-	kernel::helper::print("kita2");
+    while (true) {
+        kernel::helper::print("2");
+        for (volatile int i = 0; i < 10000000; i++);
+    }
 }
+
 
 int main() {
 	kernel::sys::init();

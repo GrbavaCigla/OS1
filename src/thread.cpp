@@ -21,6 +21,7 @@ Thread::Thread()
 
 void Thread::wrapper() {
 	Thread* thread = Scheduler::getInstance().current();
+	sys::enterUserspace();
 	thread->function();
 	thread->status = Status::Finished;
 	Thread::dispatch();

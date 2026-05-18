@@ -78,7 +78,6 @@ STATUS_ACCESSOR(SIP, sip, uint64, SIPBitmask)
 STATUS_ACCESSOR(SEPC, sepc, uint64, uint64)
 STATUS_ACCESSOR(SCause, scause, SCauseCode, uint64)
 
-INSTRUCTION(sret)
 INSTRUCTION(ecall)
 
 inline void init() {

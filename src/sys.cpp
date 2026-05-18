@@ -5,6 +5,8 @@
 namespace kernel::sys {
 extern "C" void handleSupervisorTrap() {
 	SCauseCode scause = SCause::read();
+	volatile uint64 sepc = SEPC::read();
+	volatile uint64 sstatus = SStatus::read();
 
 	switch (scause) {
 	case SCauseCode::SoftwareTimer:
@@ -20,10 +22,13 @@ extern "C" void handleSupervisorTrap() {
 	case SCauseCode::UserSyscall:
 	case SCauseCode::SuperSyscall:
 		// helper::print("syscall");
-		SEPC::write(SEPC::read() + 4);
+		sepc += 4;
 		handleSyscall();
 		break;
 	}
+
+	SEPC::write(sepc);
+	SStatus::write(sstatus);
 
 	console_handler();
 }
@@ -35,8 +40,8 @@ void enterUserspace() {
 	__asm__ volatile("sret");
 }
 
-void __attribute__((naked))
-contextSwitch(Thread::Context* oldContext, Thread::Context* newContext) {
+void __attribute__((naked)) contextSwitch(Thread::Context* oldContext,
+										  Thread::Context* newContext) {
 	__asm__ volatile("sd ra, %c0(a0)\n"
 					 "sd sp, %c1(a0)\n"
 					 "ld ra, %c0(a1)\n"
