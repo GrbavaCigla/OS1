@@ -56,6 +56,9 @@ enum class SCauseCode : uint64 {
 enum class SyscallCode : uint64 {
 	MemoryAllocate = 0x01,
 	MemoryFree = 0x02,
+	ThreadCreate = 0x11,
+	ThreadExit = 0x12,
+	ThreadDispatch = 0x13,
 };
 
 enum class SStatusBitmask : uint64 {
@@ -70,7 +73,6 @@ enum class SIPBitmask : uint64 {
 
 REGISTER_ACCESSOR(A0, a0)
 REGISTER_ACCESSOR(A1, a1)
-// REGISTER_ACCESSOR(RA, ra)
 
 STATUS_ACCESSOR(STVec, stvec, uint64, uint64)
 STATUS_ACCESSOR(SStatus, sstatus, uint64, SStatusBitmask)

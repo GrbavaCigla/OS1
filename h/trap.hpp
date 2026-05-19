@@ -1,6 +1,7 @@
 #pragma once
 #include "allocator.hpp"
 #include "sys.hpp"
+#include "thread.hpp"
 
 namespace kernel::sys {
 
@@ -15,6 +16,15 @@ inline void handleSyscall() {
 		break;
 	case sys::SyscallCode::MemoryFree:
 		ret = MemoryAllocator::getInstance().free(args[0]);
+		break;
+	case sys::SyscallCode::ThreadCreate: {
+		Thread thread = Thread((Thread::Function)args[0]);
+		break;
+	}
+	case sys::SyscallCode::ThreadExit:
+		Thread::dispatch();
+		break;
+	case sys::SyscallCode::ThreadDispatch:
 		break;
 	}
 
