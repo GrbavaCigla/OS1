@@ -19,6 +19,7 @@ inline void handleSyscall() {
 		break;
 	case sys::SyscallCode::ThreadCreate: {
 		Thread thread = Thread((Thread::Function)args[0]);
+		(void)thread;
 		break;
 	}
 	case sys::SyscallCode::ThreadExit:

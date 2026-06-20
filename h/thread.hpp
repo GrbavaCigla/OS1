@@ -20,6 +20,8 @@ class Thread {
 		uint64 sp;
 	};
 
+	static Thread* running;
+
 	static void dispatch();
 
   private:

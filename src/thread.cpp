@@ -5,6 +5,8 @@
 
 namespace kernel {
 
+Thread* Thread::running = nullptr;
+
 Thread::Thread(Function function) : status(Status::Ready), function(function) {
 	if (!function)
 		return;
@@ -20,7 +22,7 @@ Thread::Thread()
 	  context({.ra = 0, .sp = 0}) {}
 
 void Thread::wrapper() {
-	Thread* thread = Scheduler::getInstance().current();
+	Thread* thread = Thread::running;
 	sys::enterUserspace();
 	thread->function();
 	thread->status = Status::Finished;
@@ -31,23 +33,15 @@ void Thread::wrapper() {
 }
 
 void Thread::dispatch() {
-	Scheduler& scheduler = Scheduler::getInstance();
-	Thread* oldThread = scheduler.current();
-	Thread* newThread = scheduler.current();
+	Thread* oldThread = Thread::running;
+	Thread* newThread = Scheduler<RoundRobin>::getInstance().next();
 
-	do {
-		scheduler.next();
-		newThread = scheduler.current();
-	} while (newThread && newThread != oldThread &&
-			 newThread->status == Status::Finished);
-
-	if (oldThread == newThread || !oldThread || !newThread) {
+	if (!newThread || newThread == oldThread)
 		return;
-	}
-	if (newThread->status == Status::Finished) {
+	if (newThread->status == Status::Finished)
 		return;
-	}
 
+	Thread::running = newThread;
 	sys::contextSwitch(&oldThread->context, &newThread->context);
 }
 

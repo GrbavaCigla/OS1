@@ -22,10 +22,11 @@ void func2() {
 
 int main() {
 	kernel::sys::init();
-	kernel::Scheduler& scheduler = kernel::Scheduler::getInstance();
-
+	auto& scheduler = kernel::Scheduler<kernel::RoundRobin>::getInstance();
+	
 	kernel::Thread kernel = kernel::Thread();
 	scheduler.add(&kernel);
+	kernel::Thread::running = &kernel;
 
 	kernel::Thread user2 = kernel::Thread(func2);
 	scheduler.add(&user2);
