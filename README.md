@@ -14,5 +14,4 @@ The Makefile's `ASFLAGS` contained `-ggdb`, a GCC-only debug flag. The GNU assem
 `trap.S` uses `csrr` (CSR read), which belongs to the `zicsr` extension. Without the explicit sub-extension in `-march`, the assembler rejects the instruction. Added `_zicsr` to all `-march=rv64ima` flags in the Makefile.
 
 ## Reminders
-- Clobbers list for asm?
-- Check if `syscall_c.h` or `syscall_c.hpp`
+- Check permissions
