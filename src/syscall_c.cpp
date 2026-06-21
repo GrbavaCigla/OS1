@@ -24,7 +24,7 @@ int mem_free(void* ptr) {
 }
 
 int thread_create(thread_t* handle, void (*start_routine)(void*), void* arg) {
-	void* stack_space = mem_alloc(DEFAULT_STACK_SIZE);
+	uint64 stack_space = (uint64)mem_alloc(DEFAULT_STACK_SIZE) + DEFAULT_STACK_SIZE;
 
 	A0::write((uint64)SyscallCode::ThreadCreate);
 	A1::write((uint64)handle);
