@@ -24,9 +24,9 @@ void func2(void* arg) {
 int main() {
 	kernel::sys::init();
 
-	kernel::Thread kernel = kernel::Thread();
-	kernel::Thread::running = &kernel;
-	kernel::Scheduler<kernel::RoundRobin>::getInstance().add(&kernel);
+	kernel::Thread kernelThread = kernel::Thread();
+	kernel::Thread::running = &kernelThread;
+	kernel::Scheduler<kernel::RoundRobin>::getInstance().add(&kernelThread);
 
 	kernel::sys::exitSupervisor();
 
