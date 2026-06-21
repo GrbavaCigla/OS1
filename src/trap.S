@@ -7,9 +7,12 @@ supervisorTrap:
         sd x\index, \index * 8(sp)
     .endr
 
+    csrr t0, scause
+    sd t0, 0(sp)
+
     call handleSupervisorTrap
 
-    csrr t0, scause
+    ld t0, 0(sp)
     .irp index, 8,9
         li t1, \index
         beq t0, t1, skip
