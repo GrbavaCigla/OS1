@@ -1,4 +1,5 @@
 #include "../h/helper.hpp"
+#include "../h/scheduler.hpp"
 #include "../h/sys.hpp"
 #include "../h/syscall_c.hpp"
 #include "../h/thread.hpp"
@@ -25,6 +26,7 @@ int main() {
 
 	kernel::Thread idle = kernel::Thread();
 	kernel::Thread::running = &idle;
+	kernel::Scheduler<kernel::RoundRobin>::getInstance().add(&idle);
 
 	kernel::sys::exitSupervisor();
 

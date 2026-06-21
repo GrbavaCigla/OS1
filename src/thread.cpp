@@ -18,7 +18,7 @@ Thread::Thread(Function function, void* arg, uint64 stack_space)
 }
 
 Thread::Thread()
-	: status(Status::Finished), stack(nullptr), function(nullptr), arg(nullptr),
+	: status(Status::Ready), stack(nullptr), function(nullptr), arg(nullptr),
 	  context({.ra = 0, .sp = 0}) {}
 
 void Thread::wrapper() {
