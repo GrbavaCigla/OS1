@@ -59,6 +59,8 @@ enum class SyscallCode : uint64 {
 	ThreadCreate = 0x11,
 	ThreadExit = 0x12,
 	ThreadDispatch = 0x13,
+	ConsoleGetChar = 0x41,
+	ConsolePutChar = 0x42,
 };
 
 enum class SStatusBitmask : uint64 {

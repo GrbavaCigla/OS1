@@ -22,6 +22,10 @@ int thread_exit();
 
 void thread_dispatch();
 
+char getc();
+
+void putc(char);
+
 #ifdef __cplusplus
 }
 #endif

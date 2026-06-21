@@ -4,6 +4,7 @@
 #include "../h/thread.hpp"
 #include "../lib/console.h"
 #include "../lib/hw.h"
+#include "../test/userMain.hpp"
 
 void func1(void* arg) {
     while (true) {
@@ -27,11 +28,13 @@ int main() {
 
 	kernel::sys::exitSupervisor();
 
-	thread_t t1, t2;
-	thread_create(&t2, func2, nullptr);
-	thread_create(&t1, func1, nullptr);
+	userMain();
 
-	thread_exit();
+	// thread_t t1, t2;
+	// thread_create(&t2, func2, nullptr);
+	// thread_create(&t1, func1, nullptr);
+
+	// thread_exit();
 
 	return 0;
 }

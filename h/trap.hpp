@@ -1,4 +1,5 @@
 #pragma once
+#include "../lib/console.h"
 #include "allocator.hpp"
 #include "helper.hpp"
 #include "scheduler.hpp"
@@ -33,6 +34,12 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 		break;
 	case sys::SyscallCode::ThreadDispatch:
 		Thread::dispatch();
+		break;
+	case sys::SyscallCode::ConsoleGetChar:
+		ret = (uint64)__getc();
+		break;
+	case sys::SyscallCode::ConsolePutChar:
+		__putc((char)args[0]);
 		break;
 	}
 

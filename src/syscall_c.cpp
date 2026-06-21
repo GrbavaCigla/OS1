@@ -46,4 +46,16 @@ void thread_dispatch() {
 	A0::write((uint64)SyscallCode::ThreadDispatch);
 	ecall();
 }
+
+char getc() {
+	A0::write((uint64)SyscallCode::ConsoleGetChar);
+	ecall();
+	return (char)A0::read();
+}
+
+void putc(char chr) {
+	A0::write((uint64)SyscallCode::ConsolePutChar);
+	A1::write((uint64)chr);
+	ecall();
+}
 }
