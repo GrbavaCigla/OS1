@@ -11,7 +11,7 @@
 			return val;                                                        \
 		}                                                                      \
 		static inline void write(uint64 val) {                                 \
-			__asm__ volatile("mv " #reg ", %0" : : "r"(val));                  \
+			__asm__ volatile("mv " #reg ", %0" : : "r"(val) : #reg);           \
 		}                                                                      \
 	};
 
@@ -73,6 +73,8 @@ enum class SIPBitmask : uint64 {
 
 REGISTER_ACCESSOR(A0, a0)
 REGISTER_ACCESSOR(A1, a1)
+REGISTER_ACCESSOR(A2, a2)
+REGISTER_ACCESSOR(A3, a3)
 
 STATUS_ACCESSOR(STVec, stvec, uint64, uint64)
 STATUS_ACCESSOR(SStatus, sstatus, uint64, SStatusBitmask)
@@ -87,9 +89,8 @@ inline void init() {
 	sys::SStatus::set(sys::SStatusBitmask::SIE);
 }
 
-void enterUserspace();
+void exitSupervisor();
 
 void contextSwitch(Thread::Context*, Thread::Context*);
-
 
 } // namespace kernel::sys

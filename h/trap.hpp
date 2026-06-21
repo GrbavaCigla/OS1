@@ -1,5 +1,7 @@
 #pragma once
 #include "allocator.hpp"
+#include "helper.hpp"
+#include "scheduler.hpp"
 #include "sys.hpp"
 #include "thread.hpp"
 
@@ -8,7 +10,7 @@ namespace kernel::sys {
 inline void handleSyscall() {
 	sys::SyscallCode code = (sys::SyscallCode)sys::A0::read();
 	uint64 ret = 0;
-	uint64 args[] = {sys::A1::read()};
+	uint64 args[] = {sys::A1::read(), sys::A2::read(), sys::A3::read()};
 
 	switch (code) {
 	case sys::SyscallCode::MemoryAllocate:
@@ -18,14 +20,18 @@ inline void handleSyscall() {
 		ret = MemoryAllocator::getInstance().free(args[0]);
 		break;
 	case sys::SyscallCode::ThreadCreate: {
-		Thread thread = Thread((Thread::Function)args[0]);
-		(void)thread;
+		Thread* thread = (Thread*)MemoryAllocator::getInstance().allocate(helper::roundUp(sizeof(Thread)));
+		*thread = Thread((Thread::Function)args[1], (void*)args[2]);
+		Scheduler<RoundRobin>::getInstance().add(thread);
+		*(Thread**)args[0] = thread;
 		break;
 	}
 	case sys::SyscallCode::ThreadExit:
+		Thread::running->status = Thread::Status::Finished;
 		Thread::dispatch();
 		break;
 	case sys::SyscallCode::ThreadDispatch:
+		Thread::dispatch();
 		break;
 	}
 

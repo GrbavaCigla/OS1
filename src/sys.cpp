@@ -35,7 +35,7 @@ extern "C" void handleSupervisorTrap() {
 
 extern "C" void supervisorTrap();
 
-void enterUserspace() {
+void exitSupervisor() {
 	__asm__ volatile("csrw sepc, ra");
 	__asm__ volatile("sret");
 }
