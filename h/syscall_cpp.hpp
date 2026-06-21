@@ -19,6 +19,8 @@ class Thread {
 	virtual void run() {}
 
   private:
+	static void runWrapper(void*);
+
 	thread_t myHandle;
 	void (*body)(void*);
 	void* arg;

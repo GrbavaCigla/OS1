@@ -4,21 +4,23 @@ void* operator new(size_t size) { return mem_alloc(size); }
 void operator delete(void* ptr) noexcept { mem_free(ptr); }
 
 Thread::Thread(void (*body)(void*), void* arg)
-    : myHandle(nullptr), body(body), arg(arg) {}
+	: myHandle(nullptr), body(body), arg(arg) {}
 
-Thread::Thread()
-    : myHandle(nullptr), body(nullptr), arg(nullptr) {}
+Thread::Thread() : myHandle(nullptr), body(nullptr), arg(nullptr) {}
 
 Thread::~Thread() {}
 
+void Thread::runWrapper(void* arg) {
+	Thread* self = static_cast<Thread*>(arg);
+	self->run();
+}
+
 int Thread::start() {
-    return thread_create(&myHandle, body, arg);
+	if (body)
+		return thread_create(&myHandle, body, arg);
+	return thread_create(&myHandle, &Thread::runWrapper, this);
 }
 
-void Thread::dispatch() {
-    thread_dispatch();
-}
+void Thread::dispatch() { thread_dispatch(); }
 
-int Thread::sleep(time_t) {
-    return 0;
-}
+int Thread::sleep(time_t) { return 0; }
