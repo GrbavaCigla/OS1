@@ -51,6 +51,7 @@ inline void handleTimer() {
 	ticks++;
 	if (ticks >= DEFAULT_TIME_SLICE) {
 		ticks = 0;
+		Scheduler<RoundRobin>::getInstance().cleanup();
 		Thread::dispatch();
 	}
 }

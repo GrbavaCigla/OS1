@@ -54,11 +54,26 @@ template <typename Algorithm> class Scheduler {
 				cursor = candidate;
 				return candidate->thread;
 			}
-			candidate->thread->deallocate();
-			remove(candidate);
+			cursor = candidate;
 		}
 
 		return nullptr;
+	}
+
+	void cleanup() {
+		if (!cursor)
+			return;
+
+		ThreadNode* anchor = cursor;
+		for (ThreadNode* node = anchor->next; node != anchor;) {
+			ThreadNode* nextNode = node->next;
+			if (node->thread != Thread::running &&
+				node->thread->status == Thread::Status::Finished) {
+				node->thread->deallocate();
+				remove(node);
+			}
+			node = nextNode;
+		}
 	}
 
   private:
