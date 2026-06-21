@@ -42,6 +42,7 @@ extern "C" void handleSupervisorTrap() {
 extern "C" void supervisorTrap();
 
 void exitSupervisor() {
+	SStatus::clear(SStatusBitmask::SPP);
 	__asm__ volatile("csrw sepc, ra");
 	__asm__ volatile("sret");
 }
