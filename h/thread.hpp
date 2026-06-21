@@ -11,7 +11,7 @@ class Thread {
 	using Function = void (*)(void*);
 	using Argument = void*;
 
-	Thread(Function function, Argument arg);
+	Thread(Function function, Argument arg, uint64 stack_space);
 	Thread();
 
 	Status status;

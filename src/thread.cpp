@@ -8,14 +8,12 @@ namespace kernel {
 
 Thread* Thread::running = nullptr;
 
-Thread::Thread(Function function, void* arg)
+Thread::Thread(Function function, void* arg, uint64 stack_space)
     : status(Status::Ready), function(function), arg(arg) {
 	if (!function)
 		return;
 
-	this->stack =
-		(void*)MemoryAllocator::getInstance().allocate(DEFAULT_STACK_SIZE);
-	this->context.sp = (uint64)stack + DEFAULT_STACK_SIZE * MEM_BLOCK_SIZE;
+	this->context.sp = (uint64)stack_space;
 	this->context.ra = (size_t)(&this->wrapper);
 }
 

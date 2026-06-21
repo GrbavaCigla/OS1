@@ -4,9 +4,14 @@
 
 namespace kernel::sys {
 extern "C" void handleSupervisorTrap() {
+	uint64 code = A0::read();
+	uint64 args[] = {A1::read(), A2::read(), A3::read(), A4::read()};
+
 	SCauseCode scause = SCause::read();
 	volatile uint64 sepc = SEPC::read();
 	volatile uint64 sstatus = SStatus::read();
+
+	uint64 ret = 0;
 
 	switch (scause) {
 	case SCauseCode::SoftwareTimer:
@@ -23,14 +28,15 @@ extern "C" void handleSupervisorTrap() {
 	case SCauseCode::SuperSyscall:
 		// helper::print("syscall");
 		sepc += 4;
-		handleSyscall();
+		ret = handleSyscall(code, args);
 		break;
 	}
 
+	console_handler();
+	
 	SEPC::write(sepc);
 	SStatus::write(sstatus);
-
-	console_handler();
+	A0::write(ret);
 }
 
 extern "C" void supervisorTrap();

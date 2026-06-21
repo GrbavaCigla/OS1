@@ -24,10 +24,14 @@ int mem_free(void* ptr) {
 }
 
 int thread_create(thread_t* handle, void (*start_routine)(void*), void* arg) {
+	void* stack = mem_alloc(DEFAULT_STACK_SIZE * MEM_BLOCK_SIZE);
+	uint64 stack_space = (uint64)stack + DEFAULT_STACK_SIZE * MEM_BLOCK_SIZE;
+
 	A0::write((uint64)SyscallCode::ThreadCreate);
 	A1::write((uint64)handle);
 	A2::write((uint64)start_routine);
 	A3::write((uint64)arg);
+	A4::write(stack_space);
 	ecall();
 	return (int)A0::read();
 }

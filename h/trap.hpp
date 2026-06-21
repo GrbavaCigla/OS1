@@ -7,12 +7,11 @@
 
 namespace kernel::sys {
 
-inline void handleSyscall() {
-	sys::SyscallCode code = (sys::SyscallCode)sys::A0::read();
+inline uint64 handleSyscall(uint64 code, uint64* args) {
+	sys::SyscallCode syscallCode = (sys::SyscallCode)code;
 	uint64 ret = 0;
-	uint64 args[] = {sys::A1::read(), sys::A2::read(), sys::A3::read()};
 
-	switch (code) {
+	switch (syscallCode) {
 	case sys::SyscallCode::MemoryAllocate:
 		ret = MemoryAllocator::getInstance().allocate(args[0]);
 		break;
@@ -20,8 +19,10 @@ inline void handleSyscall() {
 		ret = MemoryAllocator::getInstance().free(args[0]);
 		break;
 	case sys::SyscallCode::ThreadCreate: {
-		Thread* thread = (Thread*)MemoryAllocator::getInstance().allocate(helper::roundUp(sizeof(Thread)));
-		*thread = Thread((Thread::Function)args[1], (Thread::Argument)args[2]);
+		Thread* thread = (Thread*)MemoryAllocator::getInstance().allocate(
+			helper::roundUp(sizeof(Thread)));
+		*thread = Thread((Thread::Function)args[1], (Thread::Argument)args[2],
+						 args[3]);
 		Scheduler<RoundRobin>::getInstance().add(thread);
 		*(Thread**)args[0] = thread;
 		break;
@@ -35,7 +36,7 @@ inline void handleSyscall() {
 		break;
 	}
 
-	sys::A0::write(ret);
+	return ret;
 }
 
 inline void handleTimer() {
