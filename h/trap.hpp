@@ -23,7 +23,7 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 		Thread* thread = (Thread*)MemoryAllocator::getInstance().allocate(
 			helper::roundUp(sizeof(Thread)));
 		*thread = Thread((Thread::Function)args[1], (Thread::Argument)args[2],
-						 args[3]);
+						 (void*)args[3]);
 		Scheduler<RoundRobin>::getInstance().add(thread);
 		*(Thread**)args[0] = thread;
 		break;

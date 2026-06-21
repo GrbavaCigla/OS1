@@ -8,12 +8,13 @@ namespace kernel {
 
 Thread* Thread::running = nullptr;
 
-Thread::Thread(Function function, void* arg, uint64 stack_space)
-    : status(Status::Ready), function(function), arg(arg) {
+Thread::Thread(Function function, void* arg, void* stack_space)
+    : status(Status::Ready), stack(stack_space), function(function), arg(arg) {
 	if (!function)
 		return;
 
-	this->context.sp = (uint64)stack_space;
+	this->stack = stack_space;
+	this->context.sp = (uint64)stack_space + DEFAULT_STACK_SIZE;
 	this->context.ra = (size_t)(&this->wrapper);
 }
 
