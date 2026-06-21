@@ -22,6 +22,11 @@ Thread::Thread()
 	: status(Status::Ready), stack(nullptr), function(nullptr), arg(nullptr),
 	  context({.ra = 0, .sp = 0}) {}
 
+void Thread::deallocate() {
+	MemoryAllocator::getInstance().free((size_t)stack);
+	MemoryAllocator::getInstance().free((size_t)this);
+}
+
 void Thread::wrapper() {
 	Thread* thread = Thread::running;
 	sys::exitSupervisor();

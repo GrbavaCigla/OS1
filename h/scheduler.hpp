@@ -54,6 +54,7 @@ template <typename Algorithm> class Scheduler {
 				cursor = candidate;
 				return candidate->thread;
 			}
+			candidate->thread->deallocate();
 			remove(candidate);
 		}
 

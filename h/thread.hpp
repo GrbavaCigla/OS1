@@ -25,6 +25,8 @@ class Thread {
 
 	static void dispatch();
 
+	void deallocate();
+
   private:
 	void* stack;
 	Function function;
