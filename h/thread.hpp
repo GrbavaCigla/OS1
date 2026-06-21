@@ -9,8 +9,9 @@ class Thread {
 	enum class Status { Ready, Blocked, Finished };
 
 	using Function = void (*)(void*);
+	using Argument = void*;
 
-	Thread(Function function, void* arg);
+	Thread(Function function, Argument arg);
 	Thread();
 
 	Status status;
@@ -27,7 +28,7 @@ class Thread {
   private:
 	void* stack;
 	Function function;
-	void* arg;
+	Argument arg;
 	Context context;
 
 	static void wrapper();

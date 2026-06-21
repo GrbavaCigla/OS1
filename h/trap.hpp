@@ -21,7 +21,7 @@ inline void handleSyscall() {
 		break;
 	case sys::SyscallCode::ThreadCreate: {
 		Thread* thread = (Thread*)MemoryAllocator::getInstance().allocate(helper::roundUp(sizeof(Thread)));
-		*thread = Thread((Thread::Function)args[1], (void*)args[2]);
+		*thread = Thread((Thread::Function)args[1], (Thread::Argument)args[2]);
 		Scheduler<RoundRobin>::getInstance().add(thread);
 		*(Thread**)args[0] = thread;
 		break;
