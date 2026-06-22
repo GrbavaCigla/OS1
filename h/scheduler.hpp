@@ -32,19 +32,7 @@ template <typename Algorithm> class Scheduler {
 		ThreadNode* node = (ThreadNode*)MemoryAllocator::getInstance().allocate(
 			helper::roundUp(sizeof(ThreadNode)));
 		node->thread = thread;
-
-		if (!cursor) {
-			node->next = node;
-			node->prev = node;
-			cursor = node;
-			return;
-		}
-
-		ThreadNode* tail = cursor->prev;
-		tail->next = node;
-		node->prev = tail;
-		node->next = cursor;
-		cursor->prev = node;
+		insert(node);
 	}
 
 	Thread* next() {
@@ -62,6 +50,33 @@ template <typename Algorithm> class Scheduler {
 		} while (candidate != start);
 
 		return nullptr;
+	}
+
+	void sleep(uint64 ticks) {
+		ThreadNode* node = detach(cursor);
+
+		ThreadNode** pp = &head;
+		while (*pp && (*pp)->ticks <= ticks) {
+			ticks -= (*pp)->ticks;
+			pp = &(*pp)->next;
+		}
+		node->ticks = ticks;
+		node->next = *pp;
+		if (node->next)
+			node->next->ticks -= ticks;
+		*pp = node;
+	}
+
+	void tick() {
+		if (!head)
+			return;
+		if (head->ticks > 0)
+			head->ticks--;
+		while (head && head->ticks == 0) {
+			ThreadNode* node = head;
+			head = node->next;
+			insert(node);
+		}
 	}
 
 	template <typename F>
@@ -94,10 +109,28 @@ template <typename Algorithm> class Scheduler {
 	struct ThreadNode {
 		Thread* thread;
 		ThreadNode* next;
-		ThreadNode* prev;
+		union {
+			ThreadNode* prev;
+			uint64 ticks;
+		};
 	};
 
-	void remove(ThreadNode* node) {
+	void insert(ThreadNode* node) {
+		if (!cursor) {
+			node->next = node;
+			node->prev = node;
+			cursor = node;
+			return;
+		}
+
+		ThreadNode* tail = cursor->prev;
+		tail->next = node;
+		node->prev = tail;
+		node->next = cursor;
+		cursor->prev = node;
+	}
+
+	ThreadNode* detach(ThreadNode* node) {
 		if (node->next == node) {
 			cursor = nullptr;
 		} else {
@@ -106,10 +139,16 @@ template <typename Algorithm> class Scheduler {
 			if (cursor == node)
 				cursor = node->next;
 		}
+		return node;
+	}
+
+	void remove(ThreadNode* node) {
+		detach(node);
 		MemoryAllocator::getInstance().free((size_t)node);
 	}
 
 	ThreadNode* cursor = nullptr;
+	ThreadNode* head = nullptr;
 
 	Scheduler() {}
 	~Scheduler() = default;

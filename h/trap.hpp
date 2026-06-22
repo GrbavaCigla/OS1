@@ -37,6 +37,8 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 		Thread::dispatch();
 		break;
 	case sys::SyscallCode::ThreadSleep:
+		Scheduler<RoundRobin>::getInstance().sleep(args[0]);
+		Thread::dispatch();
 		break;
 	case sys::SyscallCode::SemaphoreOpen: {
 		Semaphore* sem = (Semaphore*)MemoryAllocator::getInstance().allocate(
@@ -73,6 +75,7 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 
 inline void handleTimer() {
 	static size_t ticks = 0;
+	Scheduler<RoundRobin>::getInstance().tick();
 	ticks++;
 	if (ticks >= DEFAULT_TIME_SLICE) {
 		ticks = 0;
