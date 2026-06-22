@@ -19,10 +19,14 @@ extern "C" void handleSupervisorTrap() {
 		handleTimer();
 		break;
 	case SCauseCode::Hardware:
+		break;
 	case SCauseCode::IllegalInstruction:
 	case SCauseCode::LoadAccessFault:
 	case SCauseCode::StoreAccessFault:
-		// helper::print("other");
+		if (!(sstatus & (uint64)SStatusBitmask::SPP)) {
+			Thread::running->finished = true;
+			Thread::dispatch();
+		}
 		break;
 	case SCauseCode::UserSyscall:
 	case SCauseCode::SuperSyscall:
@@ -33,7 +37,7 @@ extern "C" void handleSupervisorTrap() {
 	}
 
 	console_handler();
-	
+
 	SEPC::write(sepc);
 	SStatus::write(sstatus);
 	A0::write(ret);
