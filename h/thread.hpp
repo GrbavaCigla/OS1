@@ -16,14 +16,13 @@ class Thread {
 	Thread(Function function, Argument arg, void* stack_space);
 	Thread();
 
+	static void* operator new(size_t, void* p) noexcept { return p; }
+
 	Status status() const;
 
 	bool finished;
 
-	struct WaitHeader {
-		Semaphore* semaphore;
-		unsigned needed;
-	} waitHeader;
+	Semaphore* semaphore;
 
 	struct Context {
 		uint64 ra;

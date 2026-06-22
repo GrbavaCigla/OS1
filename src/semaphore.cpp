@@ -1,5 +1,6 @@
 #include "../h/semaphore.hpp"
 #include "../h/allocator.hpp"
+#include "../h/helper.hpp"
 #include "../h/thread.hpp"
 #include "../h/scheduler.hpp"
 
@@ -16,13 +17,15 @@ Semaphore::Semaphore(unsigned init)
 }
 
 int Semaphore::wait(unsigned n) {
-	if (value >= (int)n) {
-		value -= (int)n;
-		return 0;
+	if (closed) return -1;
+	value -= (int)n;
+	if (value < 0) {
+		Thread::running->semaphore = this;
+		while (value < 0 && !closed)
+			Thread::dispatch();
+		Thread::running->semaphore = nullptr;
 	}
-	Thread::running->waitHeader = {this, n};
-	Thread::dispatch();
-	return 0;
+	return closed ? -1 : 0;
 }
 
 int Semaphore::signal(unsigned n) {
@@ -34,10 +37,8 @@ void Semaphore::close() { closed = true; }
 
 void Semaphore::cleanup() {
 	Scheduler<RoundRobin>::getInstance().forEach([](Thread* t) {
-		if (t->waitHeader.semaphore != nullptr && t->waitHeader.semaphore->closed) {
-			t->waitHeader.semaphore = nullptr;
-			t->waitHeader.needed = 0;
-		}
+		if (t->semaphore != nullptr && t->semaphore->closed)
+			t->semaphore = nullptr;
 	});
 	for (Semaphore* sem = head; sem != nullptr;) {
 		Semaphore* next = sem->next;

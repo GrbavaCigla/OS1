@@ -23,8 +23,8 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 	case sys::SyscallCode::ThreadCreate: {
 		Thread* thread = (Thread*)MemoryAllocator::getInstance().allocate(
 			helper::roundUp(sizeof(Thread)));
-		*thread = Thread((Thread::Function)args[1], (Thread::Argument)args[2],
-						 (void*)args[3]);
+		new(thread) Thread((Thread::Function)args[1], (Thread::Argument)args[2],
+						   (void*)args[3]);
 		Scheduler<RoundRobin>::getInstance().add(thread);
 		*(Thread**)args[0] = thread;
 		break;
@@ -39,7 +39,7 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 	case sys::SyscallCode::SemaphoreOpen: {
 		Semaphore* sem = (Semaphore*)MemoryAllocator::getInstance().allocate(
 			helper::roundUp(sizeof(Semaphore)));
-		*sem = Semaphore((unsigned)args[1]);
+		new(sem) Semaphore((unsigned)args[1]);
 		*(Semaphore**)args[0] = sem;
 		break;
 	}
@@ -74,8 +74,8 @@ inline void handleTimer() {
 	ticks++;
 	if (ticks >= DEFAULT_TIME_SLICE) {
 		ticks = 0;
-		Scheduler<RoundRobin>::getInstance().cleanup();
-		Semaphore::cleanup();
+		// Scheduler<RoundRobin>::getInstance().cleanup();
+		// Semaphore::cleanup();
 		Thread::dispatch();
 	}
 }

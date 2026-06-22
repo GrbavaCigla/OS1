@@ -8,6 +8,8 @@ class Semaphore {
   public:
 	Semaphore(unsigned init);
 
+	static void* operator new(size_t, void* p) noexcept { return p; }
+
 	int wait(unsigned n = 1);
 	int signal(unsigned n = 1);
 	void close();

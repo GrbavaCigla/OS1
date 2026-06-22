@@ -1,5 +1,6 @@
 #include "../h/helper.hpp"
 #include "../h/scheduler.hpp"
+#include "../h/semaphore.hpp"
 #include "../h/sys.hpp"
 #include "../h/syscall_c.hpp"
 #include "../h/thread.hpp"
@@ -7,19 +8,27 @@
 #include "../lib/hw.h"
 #include "../test/userMain.hpp"
 
-void func1(void* arg) {
-    while (true) {
-        kernel::helper::print("1");
-        for (volatile int i = 0; i < 10000000; i++);
-    }
-}
+// static sem_t s;
+// static sem_t done;
 
-void func2(void* arg) {
-    while (true) {
-        kernel::helper::print("2");
-        for (volatile int i = 0; i < 10000000; i++);
-    }
-}
+// static void waiter(void*) {
+//     kernel::helper::print("waiter: blocking\n");
+//     int b = sem_wait(s);
+// 	kernel::helper::print(b);
+//     kernel::helper::print("\nwaiter: unblocked\n");
+//     sem_signal(done);
+//     kernel::helper::print("waiter: signal done\n");
+// }
+
+// static void signaler(void*) {
+//     kernel::helper::print("--- before signal ---\n");
+//     kernel::Semaphore::print();
+//     sem_signal(s);
+//     kernel::helper::print("--- after signal ---\n");
+//     kernel::Semaphore::print();
+//     sem_signal(done);
+//     kernel::helper::print("signaler: signal done\n");
+// }
 
 int main() {
 	kernel::sys::init();
@@ -32,11 +41,26 @@ int main() {
 
 	userMain();
 
-	// thread_t t1, t2;
-	// thread_create(&t2, func2, nullptr);
-	// thread_create(&t1, func1, nullptr);
+	// sem_open(&s, 0);
+	// sem_open(&done, 0);
 
-	// thread_exit();
+	// thread_t t1, t2;
+	// thread_create(&t1, waiter, nullptr);
+	// thread_create(&t2, signaler, nullptr);
+
+	// thread_dispatch();
+
+	// sem_wait(done);
+	// sem_wait(done);
+
+	// kernel::helper::print("--- final state ---\n");
+	// kernel::Semaphore::print();
+
+	// kernel::helper::print("--- end ---\n");
+
+	while (true) {
+	
+	}
 
 	return 0;
 }

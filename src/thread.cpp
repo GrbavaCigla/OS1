@@ -10,7 +10,7 @@ namespace kernel {
 Thread* Thread::running = nullptr;
 
 Thread::Thread(Function function, void* arg, void* stack_space)
-    : finished(false), waitHeader({nullptr, 0}), stack(nullptr),
+    : finished(false), semaphore(nullptr), stack(nullptr),
       function(function), arg(arg) {
 	if (!function)
 		return;
@@ -21,13 +21,12 @@ Thread::Thread(Function function, void* arg, void* stack_space)
 }
 
 Thread::Thread()
-	: finished(false), waitHeader({nullptr, 0}), stack(nullptr),
+	: finished(false), semaphore(nullptr), stack(nullptr),
 	  function(nullptr), arg(nullptr), context({.ra = 0, .sp = 0}) {}
 
 Thread::Status Thread::status() const {
 	if (finished) return Status::Finished;
-	if (waitHeader.semaphore != nullptr &&
-	    waitHeader.semaphore->value < (int)waitHeader.needed)
+	if (semaphore != nullptr && semaphore->value < 0)
 		return Status::Blocked;
 	return Status::Ready;
 }
@@ -51,6 +50,11 @@ void Thread::dispatch() {
 	if (!newThread || newThread == oldThread)
 		return;
 
+	helper::print("Context switch ");
+	helper::print((uint64)newThread);
+	helper::print(" to ");
+	helper::print((uint64)Thread::running);
+	helper::print("\n");
 	Thread::running = newThread;
 	sys::contextSwitch(&oldThread->context, &newThread->context);
 }
