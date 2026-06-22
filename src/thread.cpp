@@ -50,11 +50,6 @@ void Thread::dispatch() {
 	if (!newThread || newThread == oldThread)
 		return;
 
-	helper::print("Context switch ");
-	helper::print((uint64)newThread);
-	helper::print(" to ");
-	helper::print((uint64)Thread::running);
-	helper::print("\n");
 	Thread::running = newThread;
 	sys::contextSwitch(&oldThread->context, &newThread->context);
 }
