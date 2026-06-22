@@ -29,7 +29,7 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 		break;
 	}
 	case sys::SyscallCode::ThreadExit:
-		Thread::running->status = Thread::Status::Finished;
+		Thread::running->finished = true;
 		Thread::dispatch();
 		break;
 	case sys::SyscallCode::ThreadDispatch:

@@ -9,7 +9,8 @@ namespace kernel {
 Thread* Thread::running = nullptr;
 
 Thread::Thread(Function function, void* arg, void* stack_space)
-    : status(Status::Ready), stack(nullptr), function(function), arg(arg) {
+    : finished(false), waitHeader({nullptr, 0}), stack(nullptr),
+      function(function), arg(arg) {
 	if (!function)
 		return;
 
@@ -19,8 +20,14 @@ Thread::Thread(Function function, void* arg, void* stack_space)
 }
 
 Thread::Thread()
-	: status(Status::Ready), stack(nullptr), function(nullptr), arg(nullptr),
-	  context({.ra = 0, .sp = 0}) {}
+	: finished(false), waitHeader({nullptr, 0}), stack(nullptr),
+	  function(nullptr), arg(nullptr), context({.ra = 0, .sp = 0}) {}
+
+Thread::Status Thread::status() const {
+	if (finished) return Status::Finished;
+	if (waitHeader.semaphore) return Status::Blocked;
+	return Status::Ready;
+}
 
 void Thread::deallocate() {
 	MemoryAllocator::getInstance().free((size_t)stack);
@@ -39,8 +46,6 @@ void Thread::dispatch() {
 	Thread* newThread = Scheduler<RoundRobin>::getInstance().next();
 
 	if (!newThread || newThread == oldThread)
-		return;
-	if (newThread->status == Status::Finished)
 		return;
 
 	Thread::running = newThread;

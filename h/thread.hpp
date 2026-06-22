@@ -4,6 +4,8 @@
 
 namespace kernel {
 
+class Semaphore;
+
 class Thread {
   public:
 	enum class Status { Ready, Blocked, Finished };
@@ -14,7 +16,14 @@ class Thread {
 	Thread(Function function, Argument arg, void* stack_space);
 	Thread();
 
-	Status status;
+	Status status() const;
+
+	bool finished;
+
+	struct WaitHeader {
+		Semaphore* semaphore;
+		unsigned neededUnits;
+	} waitHeader;
 
 	struct Context {
 		uint64 ra;

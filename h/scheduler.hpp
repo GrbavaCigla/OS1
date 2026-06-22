@@ -48,14 +48,18 @@ template <typename Algorithm> class Scheduler {
 	}
 
 	Thread* next() {
-		while (cursor) {
-			ThreadNode* candidate = cursor->next;
-			if (candidate->thread->status != Thread::Status::Finished) {
+		if (!cursor) return nullptr;
+
+		ThreadNode* start = cursor;
+		ThreadNode* candidate = cursor->next;
+
+		do {
+			if (candidate->thread->status() == Thread::Status::Ready) {
 				cursor = candidate;
 				return candidate->thread;
 			}
-			cursor = candidate;
-		}
+			candidate = candidate->next;
+		} while (candidate != start);
 
 		return nullptr;
 	}
@@ -68,7 +72,7 @@ template <typename Algorithm> class Scheduler {
 		for (ThreadNode* node = anchor->next; node != anchor;) {
 			ThreadNode* nextNode = node->next;
 			if (node->thread != Thread::running &&
-				node->thread->status == Thread::Status::Finished) {
+				node->thread->status() == Thread::Status::Finished) {
 				node->thread->deallocate();
 				remove(node);
 			}
