@@ -15,3 +15,4 @@ The Makefile's `ASFLAGS` contained `-ggdb`, a GCC-only debug flag. The GNU assem
 
 ## Reminders
 - Check permissions
+- Reiteratre on thread_exit freeing
