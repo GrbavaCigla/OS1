@@ -1,5 +1,6 @@
 #include "../h/semaphore.hpp"
 #include "../h/allocator.hpp"
+#include "../h/thread.hpp"
 
 namespace kernel {
 
@@ -13,9 +14,20 @@ Semaphore::Semaphore(unsigned init)
 	head = this;
 }
 
-int Semaphore::wait(unsigned n) { return 0; }
+int Semaphore::wait(unsigned n) {
+	if (value >= (int)n) {
+		value -= (int)n;
+		return 0;
+	}
+	Thread::running->waitHeader = {this, n};
+	Thread::dispatch();
+	return 0;
+}
 
-int Semaphore::signal(unsigned n) { return 0; }
+int Semaphore::signal(unsigned n) {
+	value += (int)n;
+	return 0;
+}
 
 void Semaphore::deallocate() {
 	if (prev)

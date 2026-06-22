@@ -1,4 +1,5 @@
 #include "../h/thread.hpp"
+#include "../h/semaphore.hpp"
 #include "../h/allocator.hpp"
 #include "../h/scheduler.hpp"
 #include "../h/sys.hpp"
@@ -23,9 +24,13 @@ Thread::Thread()
 	: finished(false), waitHeader({nullptr, 0}), stack(nullptr),
 	  function(nullptr), arg(nullptr), context({.ra = 0, .sp = 0}) {}
 
-Thread::Status Thread::status() const {
+Thread::Status Thread::status() {
 	if (finished) return Status::Finished;
-	if (waitHeader.semaphore) return Status::Blocked;
+	if (waitHeader.semaphore != nullptr &&
+	    waitHeader.semaphore->value < (int)waitHeader.needed)
+		return Status::Blocked;
+	waitHeader.semaphore = 0;
+	waitHeader.needed = 0;
 	return Status::Ready;
 }
 

@@ -12,8 +12,9 @@ class Semaphore {
 	int signal(unsigned n = 1);
 	void deallocate();
 
-  private:
 	int value;
+
+  private:
 	static Semaphore* head;
 	Semaphore* next;
 	Semaphore* prev;

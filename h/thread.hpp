@@ -16,13 +16,13 @@ class Thread {
 	Thread(Function function, Argument arg, void* stack_space);
 	Thread();
 
-	Status status() const;
+	Status status();
 
 	bool finished;
 
 	struct WaitHeader {
 		Semaphore* semaphore;
-		unsigned neededUnits;
+		unsigned needed;
 	} waitHeader;
 
 	struct Context {
