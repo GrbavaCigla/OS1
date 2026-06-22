@@ -16,7 +16,7 @@ class Thread {
 	Thread(Function function, Argument arg, void* stack_space);
 	Thread();
 
-	Status status();
+	Status status() const;
 
 	bool finished;
 
