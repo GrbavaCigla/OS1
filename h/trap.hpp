@@ -44,7 +44,7 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 		break;
 	}
 	case sys::SyscallCode::SemaphoreClose:
-		((Semaphore*)args[0])->deallocate();
+		((Semaphore*)args[0])->close();
 		break;
 	case sys::SyscallCode::SemaphoreWait:
 		ret = (uint64)((Semaphore*)args[0])->wait(1);
@@ -75,6 +75,7 @@ inline void handleTimer() {
 	if (ticks >= DEFAULT_TIME_SLICE) {
 		ticks = 0;
 		Scheduler<RoundRobin>::getInstance().cleanup();
+		Semaphore::cleanup();
 		Thread::dispatch();
 	}
 }

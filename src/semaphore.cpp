@@ -1,13 +1,14 @@
 #include "../h/semaphore.hpp"
 #include "../h/allocator.hpp"
 #include "../h/thread.hpp"
+#include "../h/scheduler.hpp"
 
 namespace kernel {
 
 Semaphore* Semaphore::head = nullptr;
 
 Semaphore::Semaphore(unsigned init)
-	: value((int)init), next(nullptr), prev(nullptr) {
+	: value((int)init), closed(false), next(nullptr), prev(nullptr) {
 	if (head)
 		head->prev = this;
 	next = head;
@@ -27,6 +28,23 @@ int Semaphore::wait(unsigned n) {
 int Semaphore::signal(unsigned n) {
 	value += (int)n;
 	return 0;
+}
+
+void Semaphore::close() { closed = true; }
+
+void Semaphore::cleanup() {
+	Scheduler<RoundRobin>::getInstance().forEach([](Thread* t) {
+		if (t->waitHeader.semaphore != nullptr && t->waitHeader.semaphore->closed) {
+			t->waitHeader.semaphore = nullptr;
+			t->waitHeader.needed = 0;
+		}
+	});
+	for (Semaphore* sem = head; sem != nullptr;) {
+		Semaphore* next = sem->next;
+		if (sem->closed)
+			sem->deallocate();
+		sem = next;
+	}
 }
 
 void Semaphore::deallocate() {

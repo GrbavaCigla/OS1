@@ -64,6 +64,16 @@ template <typename Algorithm> class Scheduler {
 		return nullptr;
 	}
 
+	template <typename F>
+	void forEach(F func) {
+		if (!cursor) return;
+		ThreadNode* node = cursor;
+		do {
+			func(node->thread);
+			node = node->next;
+		} while (node != cursor);
+	}
+
 	void cleanup() {
 		if (!cursor)
 			return;
