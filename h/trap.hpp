@@ -3,6 +3,7 @@
 #include "allocator.hpp"
 #include "helper.hpp"
 #include "scheduler.hpp"
+#include "semaphore.hpp"
 #include "sys.hpp"
 #include "thread.hpp"
 
@@ -34,6 +35,28 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 		break;
 	case sys::SyscallCode::ThreadDispatch:
 		Thread::dispatch();
+		break;
+	case sys::SyscallCode::SemaphoreOpen: {
+		Semaphore* sem = (Semaphore*)MemoryAllocator::getInstance().allocate(
+			helper::roundUp(sizeof(Semaphore)));
+		*sem = Semaphore((unsigned)args[1]);
+		*(Semaphore**)args[0] = sem;
+		break;
+	}
+	case sys::SyscallCode::SemaphoreClose:
+		((Semaphore*)args[0])->deallocate();
+		break;
+	case sys::SyscallCode::SemaphoreWait:
+		ret = (uint64)((Semaphore*)args[0])->wait(1);
+		break;
+	case sys::SyscallCode::SemaphoreSignal:
+		ret = (uint64)((Semaphore*)args[0])->signal(1);
+		break;
+	case sys::SyscallCode::SemaphoreWaitN:
+		ret = (uint64)((Semaphore*)args[0])->wait((unsigned)args[1]);
+		break;
+	case sys::SyscallCode::SemaphoreSignalN:
+		ret = (uint64)((Semaphore*)args[0])->signal((unsigned)args[1]);
 		break;
 	case sys::SyscallCode::ConsoleGetChar:
 		ret = (uint64)__getc();

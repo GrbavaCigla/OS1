@@ -46,6 +46,51 @@ void thread_dispatch() {
 	ecall();
 }
 
+int sem_open(sem_t* handle, unsigned init) {
+	A0::write((uint64)SyscallCode::SemaphoreOpen);
+	A1::write((uint64)handle);
+	A2::write((uint64)init);
+	ecall();
+	return (int)A0::read();
+}
+
+int sem_close(sem_t handle) {
+	A0::write((uint64)SyscallCode::SemaphoreClose);
+	A1::write((uint64)handle);
+	ecall();
+	return (int)A0::read();
+}
+
+int sem_wait(sem_t handle) {
+	A0::write((uint64)SyscallCode::SemaphoreWait);
+	A1::write((uint64)handle);
+	ecall();
+	return (int)A0::read();
+}
+
+int sem_signal(sem_t handle) {
+	A0::write((uint64)SyscallCode::SemaphoreSignal);
+	A1::write((uint64)handle);
+	ecall();
+	return (int)A0::read();
+}
+
+int sem_wait_n(sem_t handle, unsigned n) {
+	A0::write((uint64)SyscallCode::SemaphoreWaitN);
+	A1::write((uint64)handle);
+	A2::write((uint64)n);
+	ecall();
+	return (int)A0::read();
+}
+
+int sem_signal_n(sem_t handle, unsigned n) {
+	A0::write((uint64)SyscallCode::SemaphoreSignalN);
+	A1::write((uint64)handle);
+	A2::write((uint64)n);
+	ecall();
+	return (int)A0::read();
+}
+
 char getc() {
 	A0::write((uint64)SyscallCode::ConsoleGetChar);
 	ecall();

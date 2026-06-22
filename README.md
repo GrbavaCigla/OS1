@@ -17,3 +17,4 @@ The Makefile's `ASFLAGS` contained `-ggdb`, a GCC-only debug flag. The GNU assem
 - Check permissions
 - Reiteratre on thread_exit freeing
 - Replace deallocate with destructor
+- Check if all the return values are correct in ABI

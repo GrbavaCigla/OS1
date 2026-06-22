@@ -59,6 +59,12 @@ enum class SyscallCode : uint64 {
 	ThreadCreate = 0x11,
 	ThreadExit = 0x12,
 	ThreadDispatch = 0x13,
+	SemaphoreOpen = 0x21,
+	SemaphoreClose = 0x22,
+	SemaphoreWait = 0x23,
+	SemaphoreSignal = 0x24,
+	SemaphoreWaitN = 0x25,
+	SemaphoreSignalN = 0x26,
 	ConsoleGetChar = 0x41,
 	ConsolePutChar = 0x42,
 };
