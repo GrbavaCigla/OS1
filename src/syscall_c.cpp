@@ -46,6 +46,13 @@ void thread_dispatch() {
 	ecall();
 }
 
+int time_sleep(time_t period) {
+	A0::write((uint64)SyscallCode::ThreadSleep);
+	A1::write((uint64)period);
+	ecall();
+	return (int)A0::read();
+}
+
 int sem_open(sem_t* handle, unsigned init) {
 	A0::write((uint64)SyscallCode::SemaphoreOpen);
 	A1::write((uint64)handle);

@@ -9,6 +9,7 @@ class Semaphore;
 
 typedef kernel::Thread* thread_t;
 typedef kernel::Semaphore* sem_t;
+typedef unsigned long time_t;
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,6 +24,8 @@ int thread_create(thread_t*, void (*)(void*), void*);
 int thread_exit();
 
 void thread_dispatch();
+
+int time_sleep(time_t);
 
 int sem_open(sem_t*, unsigned);
 

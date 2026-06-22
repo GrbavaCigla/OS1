@@ -36,6 +36,8 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 	case sys::SyscallCode::ThreadDispatch:
 		Thread::dispatch();
 		break;
+	case sys::SyscallCode::ThreadSleep:
+		break;
 	case sys::SyscallCode::SemaphoreOpen: {
 		Semaphore* sem = (Semaphore*)MemoryAllocator::getInstance().allocate(
 			helper::roundUp(sizeof(Semaphore)));

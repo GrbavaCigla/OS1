@@ -23,7 +23,7 @@ int Thread::start() {
 
 void Thread::dispatch() { thread_dispatch(); }
 
-int Thread::sleep(time_t) { return 0; }
+int Thread::sleep(time_t period) { return time_sleep(period); }
 
 Semaphore::Semaphore(unsigned init) : myHandle(nullptr) {
 	sem_open(&myHandle, init);
