@@ -41,6 +41,18 @@ int Semaphore::signal() {
 	return sem_signal(myHandle);
 }
 
+PeriodicThread::PeriodicThread(time_t period)
+	: Thread(), period(period), terminated(false) {}
+
+void PeriodicThread::terminate() { terminated = true; }
+
+void PeriodicThread::run() {
+	while (!terminated) {
+		periodicActivation();
+		sleep(period);
+	}
+}
+
 char Console::getc() { return ::getc(); }
 
 void Console::putc(char c) { ::putc(c); }
