@@ -4,8 +4,6 @@
 
 namespace kernel {
 
-class Semaphore;
-
 class Thread {
   public:
 	using Function = void (*)(void*);
@@ -17,8 +15,6 @@ class Thread {
 	static void* operator new(size_t, void* p) noexcept { return p; }
 
 	bool finished;
-
-	Semaphore* semaphore;
 
 	struct Context {
 		uint64 ra;

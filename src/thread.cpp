@@ -1,5 +1,4 @@
 #include "../h/thread.hpp"
-#include "../h/semaphore.hpp"
 #include "../h/allocator.hpp"
 #include "../h/scheduler.hpp"
 #include "../h/sys.hpp"
@@ -10,7 +9,7 @@ namespace kernel {
 Thread* Thread::running = nullptr;
 
 Thread::Thread(Function function, void* arg, void* stack_space)
-    : finished(false), semaphore(nullptr), stack(nullptr),
+    : finished(false), stack(nullptr),
       function(function), arg(arg) {
 	if (!function)
 		return;
@@ -21,7 +20,7 @@ Thread::Thread(Function function, void* arg, void* stack_space)
 }
 
 Thread::Thread()
-	: finished(false), semaphore(nullptr), stack(nullptr),
+	: finished(false), stack(nullptr),
 	  function(nullptr), arg(nullptr), context({.ra = 0, .sp = 0}) {}
 
 void Thread::deallocate() {

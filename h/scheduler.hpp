@@ -82,24 +82,29 @@ template <typename Algorithm> class Scheduler {
 
 	void block(Semaphore* sem) {
 		ThreadNode* node = detach(readyQueue, readyQueue);
-		node->thread->semaphore = sem;
-		insert(blockedQueue, node);
+		node->sem = sem;
+		node->next = nullptr;
+		if (blockedQueueTail)
+			blockedQueueTail->next = node;
+		else
+			blockedQueue = node;
+		blockedQueueTail = node;
 	}
 
 	Thread* unblock(Semaphore* sem) {
-		if (!blockedQueue)
-			return nullptr;
-
-		ThreadNode* node = blockedQueue;
-		do {
-			if (node->thread->semaphore == sem) {
-				detach(blockedQueue, node);
-				insert(readyQueue, node);
-				return node->thread;
-			}
-			node = node->next;
-		} while (node != blockedQueue);
-
+		ThreadNode* prev = nullptr;
+		for (ThreadNode* node = blockedQueue; node; prev = node, node = node->next) {
+			if (node->sem != sem)
+				continue;
+			if (prev)
+				prev->next = node->next;
+			else
+				blockedQueue = node->next;
+			if (blockedQueueTail == node)
+				blockedQueueTail = prev;
+			insert(readyQueue, node);
+			return node->thread;
+		}
 		return nullptr;
 	}
 
@@ -135,6 +140,7 @@ template <typename Algorithm> class Scheduler {
 		union {
 			ThreadNode* prev;
 			uint64 ticks;
+			Semaphore* sem;
 		};
 	};
 
@@ -173,6 +179,7 @@ template <typename Algorithm> class Scheduler {
 	ThreadNode* readyQueue = nullptr;
 	ThreadNode* sleepQueue = nullptr;
 	ThreadNode* blockedQueue = nullptr;
+	ThreadNode* blockedQueueTail = nullptr;
 
 	Scheduler() {}
 	~Scheduler() = default;
