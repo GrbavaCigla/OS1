@@ -24,13 +24,6 @@ Thread::Thread()
 	: finished(false), semaphore(nullptr), stack(nullptr),
 	  function(nullptr), arg(nullptr), context({.ra = 0, .sp = 0}) {}
 
-Thread::Status Thread::status() const {
-	if (finished) return Status::Finished;
-	if (semaphore != nullptr && semaphore->value < 0)
-		return Status::Blocked;
-	return Status::Ready;
-}
-
 void Thread::deallocate() {
 	MemoryAllocator::getInstance().free((size_t)stack);
 	MemoryAllocator::getInstance().free((size_t)this);

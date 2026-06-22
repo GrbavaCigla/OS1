@@ -1,6 +1,7 @@
 #pragma once
 #include "allocator.hpp"
 #include "helper.hpp"
+#include "semaphore.hpp"
 #include "thread.hpp"
 
 namespace kernel {
@@ -32,18 +33,18 @@ template <typename Algorithm> class Scheduler {
 		ThreadNode* node = (ThreadNode*)MemoryAllocator::getInstance().allocate(
 			helper::roundUp(sizeof(ThreadNode)));
 		node->thread = thread;
-		insert(node);
+		insert(readyQueue, node);
 	}
 
 	Thread* next() {
-		if (!cursor) return nullptr;
+		if (!readyQueue) return nullptr;
 
-		ThreadNode* start = cursor;
-		ThreadNode* candidate = cursor->next;
+		ThreadNode* start = readyQueue;
+		ThreadNode* candidate = readyQueue->next;
 
 		do {
-			if (candidate->thread->status() == Thread::Status::Ready) {
-				cursor = candidate;
+			if (!candidate->thread->finished) {
+				readyQueue = candidate;
 				return candidate->thread;
 			}
 			candidate = candidate->next;
@@ -53,9 +54,9 @@ template <typename Algorithm> class Scheduler {
 	}
 
 	void sleep(uint64 ticks) {
-		ThreadNode* node = detach(cursor);
+		ThreadNode* node = detach(readyQueue, readyQueue);
 
-		ThreadNode** pp = &head;
+		ThreadNode** pp = &sleepQueue;
 		while (*pp && (*pp)->ticks <= ticks) {
 			ticks -= (*pp)->ticks;
 			pp = &(*pp)->next;
@@ -68,36 +69,58 @@ template <typename Algorithm> class Scheduler {
 	}
 
 	void tick() {
-		if (!head)
+		if (!sleepQueue)
 			return;
-		if (head->ticks > 0)
-			head->ticks--;
-		while (head && head->ticks == 0) {
-			ThreadNode* node = head;
-			head = node->next;
-			insert(node);
+		if (sleepQueue->ticks > 0)
+			sleepQueue->ticks--;
+		while (sleepQueue && sleepQueue->ticks == 0) {
+			ThreadNode* node = sleepQueue;
+			sleepQueue = node->next;
+			insert(readyQueue, node);
 		}
+	}
+
+	void block(Semaphore* sem) {
+		ThreadNode* node = detach(readyQueue, readyQueue);
+		node->thread->semaphore = sem;
+		insert(blockedQueue, node);
+	}
+
+	Thread* unblock(Semaphore* sem) {
+		if (!blockedQueue)
+			return nullptr;
+
+		ThreadNode* node = blockedQueue;
+		do {
+			if (node->thread->semaphore == sem) {
+				detach(blockedQueue, node);
+				insert(readyQueue, node);
+				return node->thread;
+			}
+			node = node->next;
+		} while (node != blockedQueue);
+
+		return nullptr;
 	}
 
 	template <typename F>
 	void forEach(F func) {
-		if (!cursor) return;
-		ThreadNode* node = cursor;
+		if (!readyQueue) return;
+		ThreadNode* node = readyQueue;
 		do {
 			func(node->thread);
 			node = node->next;
-		} while (node != cursor);
+		} while (node != readyQueue);
 	}
 
 	void cleanup() {
-		if (!cursor)
+		if (!readyQueue)
 			return;
 
-		ThreadNode* anchor = cursor;
+		ThreadNode* anchor = readyQueue;
 		for (ThreadNode* node = anchor->next; node != anchor;) {
 			ThreadNode* nextNode = node->next;
-			if (node->thread != Thread::running &&
-				node->thread->status() == Thread::Status::Finished) {
+			if (node->thread != Thread::running && node->thread->finished) {
 				node->thread->deallocate();
 				remove(node);
 			}
@@ -115,40 +138,41 @@ template <typename Algorithm> class Scheduler {
 		};
 	};
 
-	void insert(ThreadNode* node) {
-		if (!cursor) {
+	void insert(ThreadNode*& ring, ThreadNode* node) {
+		if (!ring) {
 			node->next = node;
 			node->prev = node;
-			cursor = node;
+			ring = node;
 			return;
 		}
 
-		ThreadNode* tail = cursor->prev;
+		ThreadNode* tail = ring->prev;
 		tail->next = node;
 		node->prev = tail;
-		node->next = cursor;
-		cursor->prev = node;
+		node->next = ring;
+		ring->prev = node;
 	}
 
-	ThreadNode* detach(ThreadNode* node) {
+	ThreadNode* detach(ThreadNode*& ring, ThreadNode* node) {
 		if (node->next == node) {
-			cursor = nullptr;
+			ring = nullptr;
 		} else {
 			node->prev->next = node->next;
 			node->next->prev = node->prev;
-			if (cursor == node)
-				cursor = node->next;
+			if (ring == node)
+				ring = node->next;
 		}
 		return node;
 	}
 
 	void remove(ThreadNode* node) {
-		detach(node);
+		detach(readyQueue, node);
 		MemoryAllocator::getInstance().free((size_t)node);
 	}
 
-	ThreadNode* cursor = nullptr;
-	ThreadNode* head = nullptr;
+	ThreadNode* readyQueue = nullptr;
+	ThreadNode* sleepQueue = nullptr;
+	ThreadNode* blockedQueue = nullptr;
 
 	Scheduler() {}
 	~Scheduler() = default;

@@ -8,8 +8,6 @@ class Semaphore;
 
 class Thread {
   public:
-	enum class Status { Ready, Blocked, Finished };
-
 	using Function = void (*)(void*);
 	using Argument = void*;
 
@@ -17,8 +15,6 @@ class Thread {
 	Thread();
 
 	static void* operator new(size_t, void* p) noexcept { return p; }
-
-	Status status() const;
 
 	bool finished;
 
