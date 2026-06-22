@@ -1,6 +1,5 @@
 #include "../h/semaphore.hpp"
 #include "../h/allocator.hpp"
-#include "../h/helper.hpp"
 #include "../h/thread.hpp"
 #include "../h/scheduler.hpp"
 
@@ -33,7 +32,10 @@ int Semaphore::signal(unsigned n) {
 	return 0;
 }
 
-void Semaphore::close() { closed = true; }
+void Semaphore::close() {
+	closed = true;
+	value = (int)(~0u >> 1);
+}
 
 void Semaphore::cleanup() {
 	Scheduler<RoundRobin>::getInstance().forEach([](Thread* t) {

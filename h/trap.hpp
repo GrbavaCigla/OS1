@@ -77,7 +77,7 @@ inline void handleTimer() {
 	if (ticks >= DEFAULT_TIME_SLICE) {
 		ticks = 0;
 		Scheduler<RoundRobin>::getInstance().cleanup();
-		Semaphore::cleanup();
+		// Semaphore::cleanup();
 		Thread::dispatch();
 	}
 }
