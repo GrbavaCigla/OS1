@@ -25,3 +25,14 @@ class Thread {
 	void (*body)(void*);
 	void* arg;
 };
+
+class Semaphore {
+  public:
+	Semaphore(unsigned init = 1);
+	virtual ~Semaphore();
+	int wait();
+	int signal();
+
+  private:
+	sem_t myHandle;
+};
