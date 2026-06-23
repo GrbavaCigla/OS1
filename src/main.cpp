@@ -28,14 +28,16 @@ int main() {
 
 	kernel::sys::exitSupervisor();
 
-	userMain();
+	// userMain();
 
 	// thread_t t1, t2, t3;
 	// thread_create(&t1, sleeper, (void*)'1');
 	// thread_create(&t2, sleeper, (void*)'2');
 	// thread_create(&t3, sleeper, (void*)'3');
 
+	kernel::sys::exit(kernel::sys::ExitStatus::Pass);
 	// while (true) {
+	// 	thread_dispatch();
 	// }
 
 	

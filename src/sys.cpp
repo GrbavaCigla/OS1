@@ -26,6 +26,8 @@ extern "C" void handleSupervisorTrap() {
 		if (!(sstatus & (uint64)SStatusBitmask::SPP)) {
 			Thread::running->finished = true;
 			Thread::dispatch();
+		} else {
+			sys::exit(ExitStatus::Fail);
 		}
 		break;
 	case SCauseCode::UserSyscall:

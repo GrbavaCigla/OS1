@@ -70,6 +70,12 @@ enum class SyscallCode : uint64 {
 	ConsolePutChar = 0x42,
 };
 
+enum class ExitStatus : uint32 {
+	Pass = 0x5555,
+	Fail = 0x3333,
+	Reset = 0x7777,
+};
+
 enum class SStatusBitmask : uint64 {
 	SIE = (1 << 1),
 	SPIE = (1 << 5),
@@ -97,6 +103,10 @@ INSTRUCTION(ecall)
 inline void init() {
 	sys::STVec::write((uint64)&supervisorTrap);
 	sys::SStatus::set(sys::SStatusBitmask::SIE);
+}
+
+inline void exit(ExitStatus status) {
+	*(volatile uint32*)0x100000 = (uint32)status;
 }
 
 void exitSupervisor();
