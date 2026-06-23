@@ -1,6 +1,6 @@
 #pragma once
-#include "../lib/console.h"
 #include "allocator.hpp"
+#include "helper.hpp"
 #include "scheduler.hpp"
 #include "semaphore.hpp"
 #include "sys.hpp"
@@ -58,12 +58,14 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 		ret = (uint64)((Semaphore*)args[0])->signal((unsigned)args[1]);
 		break;
 	case sys::SyscallCode::ConsoleGetChar:
-		ret = (uint64)__getc();
+		ret = (uint64)inputBuffer->get();
 		break;
 	case sys::SyscallCode::ConsolePutChar:
-		__putc((char)args[0]);
+		// Console::getInstance().putc((char)args[0]);
 		break;
 	}
+
+	// console_handler();
 
 	return ret;
 }
@@ -78,6 +80,20 @@ inline void handleTimer() {
 		// Semaphore::cleanup();
 		Thread::dispatch();
 	}
+}
+
+inline void handleHardware() {
+	int irq = plic_claim();
+	if (irq == (int)CONSOLE_IRQ) {
+		char data = *(char*)CONSOLE_STATUS;
+		while (data & CONSOLE_RX_STATUS_BIT) {
+			char c = *(char*)CONSOLE_RX_DATA;
+			inputBuffer->put(c);
+			data = *(char*)CONSOLE_STATUS;
+		}
+	}
+	if (irq)
+		plic_complete(irq);
 }
 
 } // namespace kernel::sys

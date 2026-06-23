@@ -19,6 +19,7 @@ extern "C" void handleSupervisorTrap() {
 		handleTimer();
 		break;
 	case SCauseCode::Hardware:
+		handleHardware();
 		break;
 	case SCauseCode::IllegalInstruction:
 	case SCauseCode::LoadAccessFault:
@@ -27,6 +28,7 @@ extern "C" void handleSupervisorTrap() {
 			Thread::running->finished = true;
 			Thread::dispatch();
 		} else {
+			helper::print("zajeb");
 			sys::exit(ExitStatus::Fail);
 		}
 		break;
@@ -38,7 +40,7 @@ extern "C" void handleSupervisorTrap() {
 		break;
 	}
 
-	console_handler();
+	// console_handler();
 
 	SEPC::write(sepc);
 	SStatus::write(sstatus);
@@ -64,5 +66,8 @@ void __attribute__((naked)) contextSwitch(Thread::Context* oldContext,
 					 : "i"(__builtin_offsetof(Thread::Context, ra)),
 					   "i"(__builtin_offsetof(Thread::Context, sp)));
 }
+
+Buffer<BufferType::Input>* inputBuffer = nullptr;
+Buffer<BufferType::Output>* outputBuffer = nullptr;
 
 } // namespace kernel::sys
