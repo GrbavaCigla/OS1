@@ -11,8 +11,12 @@ class Thread {
 
 	Thread(Function function, Argument arg, void* stack_space);
 	Thread();
+	~Thread();
 
-	static void* operator new(size_t, void* p) noexcept { return p; }
+	static void* operator new(size_t);
+	static void* operator new[](size_t);
+	static void operator delete(void*) noexcept;
+	static void operator delete[](void*) noexcept;
 
 	bool finished;
 
@@ -24,8 +28,6 @@ class Thread {
 	static Thread* running;
 
 	static void dispatch();
-
-	void deallocate();
 
   private:
 	void* stack;

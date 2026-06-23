@@ -23,9 +23,24 @@ Thread::Thread()
 	: finished(false), stack(nullptr),
 	  function(nullptr), arg(nullptr), context({.ra = 0, .sp = 0}) {}
 
-void Thread::deallocate() {
+Thread::~Thread() {
 	MemoryAllocator::getInstance().free((size_t)stack);
-	MemoryAllocator::getInstance().free((size_t)this);
+}
+
+void* Thread::operator new(size_t size) {
+	return (void*)MemoryAllocator::getInstance().allocate(helper::roundUp(size));
+}
+
+void* Thread::operator new[](size_t size) {
+	return (void*)MemoryAllocator::getInstance().allocate(helper::roundUp(size));
+}
+
+void Thread::operator delete(void* ptr) noexcept {
+	MemoryAllocator::getInstance().free((size_t)ptr);
+}
+
+void Thread::operator delete[](void* ptr) noexcept {
+	MemoryAllocator::getInstance().free((size_t)ptr);
 }
 
 void Thread::wrapper() {

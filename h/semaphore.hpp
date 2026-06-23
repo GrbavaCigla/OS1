@@ -8,13 +8,16 @@ namespace kernel {
 class Semaphore {
   public:
 	Semaphore(unsigned init);
+	~Semaphore();
 
-	static void* operator new(size_t, void* p) noexcept { return p; }
+	static void* operator new(size_t);
+	static void* operator new[](size_t);
+	static void operator delete(void*) noexcept;
+	static void operator delete[](void*) noexcept;
 
 	int wait(unsigned n = 1);
 	int signal(unsigned n = 1);
 	void close();
-	void deallocate();
 	static void cleanup();
 
 	int value;

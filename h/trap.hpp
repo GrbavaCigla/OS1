@@ -1,7 +1,6 @@
 #pragma once
 #include "../lib/console.h"
 #include "allocator.hpp"
-#include "helper.hpp"
 #include "scheduler.hpp"
 #include "semaphore.hpp"
 #include "sys.hpp"
@@ -21,10 +20,8 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 		ret = MemoryAllocator::getInstance().free(args[0]);
 		break;
 	case sys::SyscallCode::ThreadCreate: {
-		Thread* thread = (Thread*)MemoryAllocator::getInstance().allocate(
-			helper::roundUp(sizeof(Thread)));
-		new(thread) Thread((Thread::Function)args[1], (Thread::Argument)args[2],
-						   (void*)args[3]);
+		Thread* thread = new Thread((Thread::Function)args[1],
+									(Thread::Argument)args[2], (void*)args[3]);
 		Scheduler<RoundRobin>::getInstance().add(thread);
 		*(Thread**)args[0] = thread;
 		break;
@@ -41,9 +38,7 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 		Thread::dispatch();
 		break;
 	case sys::SyscallCode::SemaphoreOpen: {
-		Semaphore* sem = (Semaphore*)MemoryAllocator::getInstance().allocate(
-			helper::roundUp(sizeof(Semaphore)));
-		new(sem) Semaphore((unsigned)args[1]);
+		Semaphore* sem = new Semaphore((unsigned)args[1]);
 		*(Semaphore**)args[0] = sem;
 		break;
 	}

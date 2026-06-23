@@ -28,7 +28,7 @@ int main() {
 
 	kernel::sys::exitSupervisor();
 
-	// userMain();
+	userMain();
 
 	// thread_t t1, t2, t3;
 	// thread_create(&t1, sleeper, (void*)'1');

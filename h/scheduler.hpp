@@ -101,7 +101,7 @@ template <typename Algorithm> class Scheduler {
 		for (ThreadNode* node = anchor->next; node != anchor;) {
 			ThreadNode* nextNode = node->next;
 			if (node->thread != Thread::running && node->thread->finished) {
-				node->thread->deallocate();
+				delete node->thread;
 				remove(node);
 			}
 			node = nextNode;

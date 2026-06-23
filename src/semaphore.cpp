@@ -49,20 +49,34 @@ void Semaphore::cleanup() {
 	for (Semaphore* sem = head; sem != nullptr;) {
 		Semaphore* next = sem->next;
 		if (sem->closed)
-			sem->deallocate();
+			delete sem;
 		sem = next;
 	}
 }
 
-void Semaphore::deallocate() {
+Semaphore::~Semaphore() {
 	if (prev)
 		prev->next = next;
 	else
 		head = next;
 	if (next)
 		next->prev = prev;
+}
 
-	MemoryAllocator::getInstance().free((size_t)this);
+void* Semaphore::operator new(size_t size) {
+	return (void*)MemoryAllocator::getInstance().allocate(helper::roundUp(size));
+}
+
+void* Semaphore::operator new[](size_t size) {
+	return (void*)MemoryAllocator::getInstance().allocate(helper::roundUp(size));
+}
+
+void Semaphore::operator delete(void* ptr) noexcept {
+	MemoryAllocator::getInstance().free((size_t)ptr);
+}
+
+void Semaphore::operator delete[](void* ptr) noexcept {
+	MemoryAllocator::getInstance().free((size_t)ptr);
 }
 
 } // namespace kernel
