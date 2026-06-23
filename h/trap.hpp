@@ -59,23 +59,21 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 		break;
 	case sys::SyscallCode::ConsoleGetChar:
 		ret = (uint64)inputBuffer->get();
+		// ret = __getc();
 		break;
 	case sys::SyscallCode::ConsolePutChar:
-		// Console::getInstance().putc((char)args[0]);
+		// __putc(args[0]);
+		outputBuffer->put(args[0]);
 		break;
 	}
-
-	// console_handler();
 
 	return ret;
 }
 
 inline void handleTimer() {
-	static size_t ticks = 0;
 	Scheduler<RoundRobin>::getInstance().tick();
-	ticks++;
-	if (ticks >= DEFAULT_TIME_SLICE) {
-		ticks = 0;
+	Thread::ticks++;
+	if (Thread::ticks >= DEFAULT_TIME_SLICE) {
 		Scheduler<RoundRobin>::getInstance().cleanup();
 		// Semaphore::cleanup();
 		Thread::dispatch();

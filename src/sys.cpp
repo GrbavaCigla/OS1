@@ -1,6 +1,5 @@
 #include "../h/sys.hpp"
 #include "../h/trap.hpp"
-#include "../lib/console.h"
 
 namespace kernel::sys {
 extern "C" void handleSupervisorTrap() {
@@ -28,19 +27,16 @@ extern "C" void handleSupervisorTrap() {
 			Thread::running->finished = true;
 			Thread::dispatch();
 		} else {
-			helper::print("zajeb");
+			helper::print("Kernel panic :(");
 			sys::exit(ExitStatus::Fail);
 		}
 		break;
 	case SCauseCode::UserSyscall:
 	case SCauseCode::SuperSyscall:
-		// helper::print("syscall");
 		sepc += 4;
 		ret = handleSyscall(code, args);
 		break;
 	}
-
-	// console_handler();
 
 	SEPC::write(sepc);
 	SStatus::write(sstatus);

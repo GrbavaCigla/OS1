@@ -1,7 +1,7 @@
 #include "../h/semaphore.hpp"
 #include "../h/allocator.hpp"
-#include "../h/thread.hpp"
 #include "../h/scheduler.hpp"
+#include "../h/thread.hpp"
 
 namespace kernel {
 
@@ -17,7 +17,8 @@ Semaphore::Semaphore(unsigned init)
 }
 
 int Semaphore::wait(unsigned n) {
-	if (closed) return -1;
+	if (closed)
+		return -1;
 	value -= (int)n;
 	if (value < 0) {
 		Scheduler<RoundRobin>& sched = Scheduler<RoundRobin>::getInstance();
@@ -28,7 +29,8 @@ int Semaphore::wait(unsigned n) {
 }
 
 int Semaphore::signal(unsigned n) {
-	if (closed) return -1;
+	if (closed)
+		return -1;
 	Scheduler<RoundRobin>& sched = Scheduler<RoundRobin>::getInstance();
 	for (unsigned i = 0; i < n; i++) {
 		value++;
@@ -64,11 +66,13 @@ Semaphore::~Semaphore() {
 }
 
 void* Semaphore::operator new(size_t size) {
-	return (void*)MemoryAllocator::getInstance().allocate(helper::roundUp(size));
+	return (void*)MemoryAllocator::getInstance().allocate(
+		helper::roundUp(size));
 }
 
 void* Semaphore::operator new[](size_t size) {
-	return (void*)MemoryAllocator::getInstance().allocate(helper::roundUp(size));
+	return (void*)MemoryAllocator::getInstance().allocate(
+		helper::roundUp(size));
 }
 
 void Semaphore::operator delete(void* ptr) noexcept {

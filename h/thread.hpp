@@ -27,6 +27,8 @@ class Thread {
 
 	static Thread* running;
 
+	static uint64 ticks;
+
 	static void dispatch();
 
   private:

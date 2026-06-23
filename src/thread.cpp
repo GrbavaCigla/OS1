@@ -7,10 +7,10 @@
 namespace kernel {
 
 Thread* Thread::running = nullptr;
+uint64 Thread::ticks = 0;
 
 Thread::Thread(Function function, void* arg, void* stack_space)
-    : finished(false), stack(nullptr),
-      function(function), arg(arg) {
+	: finished(false), stack(nullptr), function(function), arg(arg) {
 	if (!function)
 		return;
 
@@ -20,19 +20,19 @@ Thread::Thread(Function function, void* arg, void* stack_space)
 }
 
 Thread::Thread()
-	: finished(false), stack(nullptr),
-	  function(nullptr), arg(nullptr), context({.ra = 0, .sp = 0}) {}
+	: finished(false), stack(nullptr), function(nullptr), arg(nullptr),
+	  context({.ra = 0, .sp = 0}) {}
 
-Thread::~Thread() {
-	MemoryAllocator::getInstance().free((size_t)stack);
-}
+Thread::~Thread() { MemoryAllocator::getInstance().free((size_t)stack); }
 
 void* Thread::operator new(size_t size) {
-	return (void*)MemoryAllocator::getInstance().allocate(helper::roundUp(size));
+	return (void*)MemoryAllocator::getInstance().allocate(
+		helper::roundUp(size));
 }
 
 void* Thread::operator new[](size_t size) {
-	return (void*)MemoryAllocator::getInstance().allocate(helper::roundUp(size));
+	return (void*)MemoryAllocator::getInstance().allocate(
+		helper::roundUp(size));
 }
 
 void Thread::operator delete(void* ptr) noexcept {
@@ -57,6 +57,7 @@ void Thread::dispatch() {
 	if (!newThread || newThread == oldThread)
 		return;
 
+	ticks = 0;
 	Thread::running = newThread;
 	sys::contextSwitch(&oldThread->context, &newThread->context);
 }
