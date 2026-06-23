@@ -18,7 +18,7 @@ int main() {
 	kernel::Thread::running = &kernelThread;
 	kernel::Scheduler<kernel::RoundRobin>::getInstance().add(&kernelThread);
 
-	// kernel::sys::exitSupervisor();
+	kernel::sys::exitSupervisor();
 
 	thread_t userThread;
 	thread_create(&userThread, user, nullptr);
