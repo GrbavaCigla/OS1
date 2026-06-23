@@ -88,7 +88,8 @@ inline void handleHardware() {
 		char data = *(char*)CONSOLE_STATUS;
 		while (data & CONSOLE_RX_STATUS_BIT) {
 			char c = *(char*)CONSOLE_RX_DATA;
-			inputBuffer->put(c);
+			if (!inputBuffer->isFull())
+				inputBuffer->put(c);
 			data = *(char*)CONSOLE_STATUS;
 		}
 	}
