@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../lib/hw.h"
+#include "scheduler.hpp"
 
 namespace kernel {
 
@@ -20,6 +21,8 @@ class Semaphore {
 	bool closed;
 
   private:
+	Scheduler<RoundRobin>::ThreadNode* threads;
+
 	static Semaphore* head;
 	Semaphore* next;
 	Semaphore* prev;

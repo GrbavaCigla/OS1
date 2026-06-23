@@ -8,7 +8,8 @@ namespace kernel {
 Semaphore* Semaphore::head = nullptr;
 
 Semaphore::Semaphore(unsigned init)
-	: value((int)init), closed(false), next(nullptr), prev(nullptr) {
+	: value((int)init), closed(false), threads(nullptr), next(nullptr),
+	  prev(nullptr) {
 	if (head)
 		head->prev = this;
 	next = head;
@@ -19,25 +20,29 @@ int Semaphore::wait(unsigned n) {
 	if (closed) return -1;
 	value -= (int)n;
 	if (value < 0) {
-		Scheduler<RoundRobin>::getInstance().block(this);
+		Scheduler<RoundRobin>& sched = Scheduler<RoundRobin>::getInstance();
+		sched.insert(threads, sched.detach(sched.readyQueue, sched.readyQueue));
 		Thread::dispatch();
 	}
 	return closed ? -1 : 0;
 }
 
 int Semaphore::signal(unsigned n) {
+	if (closed) return -1;
+	Scheduler<RoundRobin>& sched = Scheduler<RoundRobin>::getInstance();
 	for (unsigned i = 0; i < n; i++) {
 		value++;
-		if (value <= 0)
-			Scheduler<RoundRobin>::getInstance().unblock(this);
+		if (value <= 0 && threads)
+			sched.insert(sched.readyQueue, sched.detach(threads, threads));
 	}
 	return 0;
 }
 
 void Semaphore::close() {
 	closed = true;
-	while (Scheduler<RoundRobin>::getInstance().unblock(this))
-		;
+	Scheduler<RoundRobin>& sched = Scheduler<RoundRobin>::getInstance();
+	while (threads)
+		sched.insert(sched.readyQueue, sched.detach(threads, threads));
 }
 
 void Semaphore::cleanup() {

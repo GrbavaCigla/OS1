@@ -1,10 +1,11 @@
 #pragma once
 #include "allocator.hpp"
 #include "helper.hpp"
-#include "semaphore.hpp"
 #include "thread.hpp"
 
 namespace kernel {
+
+class Semaphore;
 
 struct RoundRobin {};
 
@@ -19,6 +20,8 @@ template <typename Algorithm> class Scheduler {
 	static_assert(IsSchedulingAlgorithm<Algorithm>::value,
 				  "Scheduler<Algorithm>: Algorithm must be a registered "
 				  "scheduling-algorithm marker (see IsSchedulingAlgorithm)");
+
+	friend class Semaphore;
 
   public:
 	static Scheduler& getInstance() {
@@ -80,34 +83,6 @@ template <typename Algorithm> class Scheduler {
 		}
 	}
 
-	void block(Semaphore* sem) {
-		ThreadNode* node = detach(readyQueue, readyQueue);
-		node->sem = sem;
-		node->next = nullptr;
-		if (blockedQueueTail)
-			blockedQueueTail->next = node;
-		else
-			blockedQueue = node;
-		blockedQueueTail = node;
-	}
-
-	Thread* unblock(Semaphore* sem) {
-		ThreadNode* prev = nullptr;
-		for (ThreadNode* node = blockedQueue; node; prev = node, node = node->next) {
-			if (node->sem != sem)
-				continue;
-			if (prev)
-				prev->next = node->next;
-			else
-				blockedQueue = node->next;
-			if (blockedQueueTail == node)
-				blockedQueueTail = prev;
-			insert(readyQueue, node);
-			return node->thread;
-		}
-		return nullptr;
-	}
-
 	template <typename F>
 	void forEach(F func) {
 		if (!readyQueue) return;
@@ -140,7 +115,6 @@ template <typename Algorithm> class Scheduler {
 		union {
 			ThreadNode* prev;
 			uint64 ticks;
-			Semaphore* sem;
 		};
 	};
 
@@ -178,8 +152,6 @@ template <typename Algorithm> class Scheduler {
 
 	ThreadNode* readyQueue = nullptr;
 	ThreadNode* sleepQueue = nullptr;
-	ThreadNode* blockedQueue = nullptr;
-	ThreadNode* blockedQueueTail = nullptr;
 
 	Scheduler() {}
 	~Scheduler() = default;
