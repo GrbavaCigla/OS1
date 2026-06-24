@@ -24,6 +24,7 @@ extern "C" void handleSupervisorTrap() {
 	case SCauseCode::LoadAccessFault:
 	case SCauseCode::StoreAccessFault:
 		if (!(sstatus & (uint64)SStatusBitmask::SPP)) {
+			console::print("Thread killed");
 			Thread::running->finished = true;
 			Thread::dispatch();
 		} else {

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../lib/hw.h"
 #include "allocator.hpp"
 #include "helper.hpp"
 #include "semaphore.hpp"
@@ -9,7 +8,7 @@ namespace kernel {
 
 enum class BufferType { Input, Output };
 
-template <BufferType T>
+template <BufferType T, unsigned int capacity = 4>
 class Buffer {
   public:
 	Buffer() : available(T == BufferType::Output ? capacity : 0) {}
@@ -67,8 +66,6 @@ class Buffer {
 	}
 
   private:
-	static const int capacity = 256;
-
 	char data[capacity];
 	int head = 0;
 	int tail = 0;

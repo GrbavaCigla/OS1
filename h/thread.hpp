@@ -1,8 +1,12 @@
 #pragma once
 
 #include "../lib/hw.h"
+#include "syscall_c.hpp"
 
 namespace kernel {
+namespace sys {
+void exitSupervisor();
+}
 
 class Thread {
   public:
@@ -10,6 +14,7 @@ class Thread {
 	using Argument = void*;
 
 	Thread(Function function, Argument arg, void* stack_space);
+	Thread(Function function, Argument arg);
 	Thread();
 	~Thread();
 
@@ -37,7 +42,13 @@ class Thread {
 	Argument arg;
 	Context context;
 
-	static void wrapper();
+	template <bool privileged = false> static void wrapper() {
+		Thread* thread = Thread::running;
+		if (!privileged)
+			sys::exitSupervisor();
+		thread->function(thread->arg);
+		thread_exit();
+	}
 };
 
 } // namespace kernel

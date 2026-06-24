@@ -16,7 +16,18 @@ Thread::Thread(Function function, void* arg, void* stack_space)
 
 	this->stack = (void*)((uint64)stack_space - DEFAULT_STACK_SIZE);
 	this->context.sp = (uint64)stack_space;
-	this->context.ra = (size_t)(&this->wrapper);
+	this->context.ra = (size_t)(&Thread::wrapper<false>);
+}
+
+Thread::Thread(Function function, void* arg)
+	: finished(false), stack(nullptr), function(function), arg(arg) {
+	if (!function)
+		return;
+
+	size_t allocated = MemoryAllocator::getInstance().allocate(helper::roundUp(DEFAULT_STACK_SIZE));
+	this->stack = (void*)allocated;
+	this->context.sp = allocated + DEFAULT_STACK_SIZE;
+	this->context.ra = (size_t)(&Thread::wrapper<true>);
 }
 
 Thread::Thread()
@@ -41,13 +52,6 @@ void Thread::operator delete(void* ptr) noexcept {
 
 void Thread::operator delete[](void* ptr) noexcept {
 	MemoryAllocator::getInstance().free((size_t)ptr);
-}
-
-void Thread::wrapper() {
-	Thread* thread = Thread::running;
-	sys::exitSupervisor();
-	thread->function(thread->arg);
-	thread_exit();
 }
 
 void Thread::dispatch() {
