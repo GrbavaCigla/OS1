@@ -28,7 +28,7 @@ Thread::Thread(Function function, void* arg, bool privileged)
 		return;
 
 	size_t allocated = MemoryAllocator::getInstance().allocate(
-		helper::roundUp(DEFAULT_STACK_SIZE));
+		helper::roundUp(DEFAULT_STACK_SIZE), 'c');
 	this->stack = (void*)allocated;
 	this->context.sp = allocated + DEFAULT_STACK_SIZE;
 	if (privileged)
@@ -45,12 +45,12 @@ Thread::~Thread() { MemoryAllocator::getInstance().free((size_t)stack); }
 
 void* Thread::operator new(size_t size) {
 	return (void*)MemoryAllocator::getInstance().allocate(
-		helper::roundUp(size));
+		helper::roundUp(size), 't');
 }
 
 void* Thread::operator new[](size_t size) {
 	return (void*)MemoryAllocator::getInstance().allocate(
-		helper::roundUp(size));
+		helper::roundUp(size), 'T');
 }
 
 void Thread::operator delete(void* ptr) noexcept {

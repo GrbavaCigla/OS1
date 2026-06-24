@@ -1,4 +1,5 @@
 #include "../h/console.hpp"
+#include "../h/logger.hpp"
 #include "../h/scheduler.hpp"
 #include "../h/sys.hpp"
 #include "../h/syscall_c.hpp"
@@ -7,10 +8,9 @@
 
 static volatile bool isUserThreadFinished = false;
 
-static void user(void*) {
+void user(void*) {
 	userMain();
 	isUserThreadFinished = true;
-
 }
 
 int main() {
@@ -20,13 +20,31 @@ int main() {
 	kernel::Thread::running = &kernelThread;
 	kernel::Scheduler<kernel::RoundRobin>::getInstance().add(&kernelThread);
 
-	kernel::Thread userThread = kernel::Thread(user, nullptr);
-	kernel::Scheduler<kernel::RoundRobin>::getInstance().add(&userThread);
+	kernel::sys::exitSupervisor();
 
-	while (!isUserThreadFinished) {
-		kernel::console::flushOutput();
+	kernel::console::print("=== memory before userMain ===\n");
+	kernel::Logger::printFreeChunks();
+	kernel::Logger::printAllocationHeaders();
+
+	kernel::console::start();
+
+	thread_t userThread;
+	thread_create(&userThread, user, nullptr);
+
+	while (!isUserThreadFinished)
 		thread_dispatch();
-	}
+
+	kernel::console::stop();
+
+	while (kernel::Scheduler<kernel::RoundRobin>::getInstance().hasPending())
+		thread_dispatch();
+
+	kernel::Scheduler<kernel::RoundRobin>::getInstance().cleanup();
+	kernel::Semaphore::cleanup();
+	kernel::console::print("=== memory after userMain ===\n");
+	kernel::Logger::printFreeChunks();
+	kernel::Logger::printAllocationHeaders();
+
 	kernel::console::flushOutput();
 	kernel::sys::exit(kernel::sys::ExitStatus::Pass);
 

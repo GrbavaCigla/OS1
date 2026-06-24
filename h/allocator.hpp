@@ -4,7 +4,11 @@
 
 namespace kernel {
 
+class Logger;
+
 class MemoryAllocator {
+	friend class Logger;
+
   public:
 	static MemoryAllocator& getInstance() {
 		static MemoryAllocator instance;
@@ -14,7 +18,7 @@ class MemoryAllocator {
 	MemoryAllocator(const MemoryAllocator&) = delete;
 	MemoryAllocator& operator=(const MemoryAllocator&) = delete;
 
-	size_t allocate(size_t);
+	size_t allocate(size_t, char flag = 'u');
 	int free(size_t);
 
   private:
@@ -30,6 +34,7 @@ class MemoryAllocator {
 	struct AllocationHeader {
 		size_t blocks;
 		size_t next;
+		char flag;
 	};
 
 	FreeChunkNode* head;

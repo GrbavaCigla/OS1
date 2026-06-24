@@ -6,6 +6,7 @@
 namespace kernel {
 
 class Semaphore;
+class Logger;
 
 struct RoundRobin {};
 
@@ -22,6 +23,7 @@ template <typename Algorithm> class Scheduler {
 				  "scheduling-algorithm marker (see IsSchedulingAlgorithm)");
 
 	friend class Semaphore;
+	friend class Logger;
 
   public:
 	static Scheduler& getInstance() {
@@ -34,7 +36,7 @@ template <typename Algorithm> class Scheduler {
 
 	void add(Thread* thread) {
 		ThreadNode* node = (ThreadNode*)MemoryAllocator::getInstance().allocate(
-			helper::roundUp(sizeof(ThreadNode)));
+			helper::roundUp(sizeof(ThreadNode)), 'n');
 		node->thread = thread;
 		insert(readyQueue, node);
 	}
@@ -91,6 +93,18 @@ template <typename Algorithm> class Scheduler {
 			func(node->thread);
 			node = node->next;
 		} while (node != readyQueue);
+	}
+
+	bool hasPending() {
+		if (!readyQueue)
+			return false;
+		ThreadNode* node = readyQueue;
+		do {
+			if (node->thread != Thread::running && !node->thread->finished)
+				return true;
+			node = node->next;
+		} while (node != readyQueue);
+		return false;
 	}
 
 	void cleanup() {

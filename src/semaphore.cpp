@@ -67,12 +67,12 @@ Semaphore::~Semaphore() {
 
 void* Semaphore::operator new(size_t size) {
 	return (void*)MemoryAllocator::getInstance().allocate(
-		helper::roundUp(size));
+		helper::roundUp(size), 's');
 }
 
 void* Semaphore::operator new[](size_t size) {
 	return (void*)MemoryAllocator::getInstance().allocate(
-		helper::roundUp(size));
+		helper::roundUp(size), 'S');
 }
 
 void Semaphore::operator delete(void* ptr) noexcept {

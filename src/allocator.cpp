@@ -13,7 +13,7 @@ MemoryAllocator::MemoryAllocator() {
 	this->head->prev = nullptr;
 }
 
-size_t MemoryAllocator::allocate(size_t blocks) {
+size_t MemoryAllocator::allocate(size_t blocks, char flag) {
 	blocks++;
 
 	FreeChunkNode* ff = this->head;
@@ -38,6 +38,7 @@ size_t MemoryAllocator::allocate(size_t blocks) {
 	AllocationHeader* ah = (AllocationHeader*)start;
 	ah->blocks = blocks;
 	ah->next = start + MEM_BLOCK_SIZE;
+	ah->flag = flag;
 
 	return start + MEM_BLOCK_SIZE;
 }

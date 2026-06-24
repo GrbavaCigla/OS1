@@ -29,10 +29,10 @@ class Buffer {
 	}
 
 	static void* operator new(size_t size) {
-		return (void*)MemoryAllocator::getInstance().allocate(helper::roundUp(size));
+		return (void*)MemoryAllocator::getInstance().allocate(helper::roundUp(size), 'b');
 	}
 	static void* operator new[](size_t size) {
-		return (void*)MemoryAllocator::getInstance().allocate(helper::roundUp(size));
+		return (void*)MemoryAllocator::getInstance().allocate(helper::roundUp(size), 'B');
 	}
 	static void operator delete(void* ptr) noexcept {
 		MemoryAllocator::getInstance().free((size_t)ptr);

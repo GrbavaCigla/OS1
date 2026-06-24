@@ -5,7 +5,11 @@
 
 namespace kernel {
 
+class Logger;
+
 class Semaphore {
+	friend class Logger;
+
   public:
 	Semaphore(unsigned init);
 	~Semaphore();

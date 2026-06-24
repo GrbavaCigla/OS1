@@ -14,7 +14,7 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 
 	switch (syscallCode) {
 	case sys::SyscallCode::MemoryAllocate:
-		ret = MemoryAllocator::getInstance().allocate(args[0]);
+		ret = MemoryAllocator::getInstance().allocate(args[0], 'c');
 		break;
 	case sys::SyscallCode::MemoryFree:
 		ret = MemoryAllocator::getInstance().free(args[0]);

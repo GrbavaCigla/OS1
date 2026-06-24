@@ -5,6 +5,8 @@
 
 namespace kernel::console {
 
+static volatile bool finished = false;
+
 extern Buffer<>* inputBuffer;
 extern Buffer<>* outputBuffer;
 
@@ -27,24 +29,28 @@ inline void bufferInput() {
 }
 
 void print(const char* s);
+void print(char c);
 
-template <typename T> void print(T x) {
+template <typename T> void print(T x, unsigned base = 10) {
+	static const char digits[] = "0123456789abcdef";
+
 	uint64 b = 0;
 	int count = 0;
 	do {
-		b *= 10;
-		b += x % 10;
-		x /= 10;
+		b *= base;
+		b += x % base;
+		x /= base;
 		count++;
 	} while (x != 0);
 	for (int i = 0; i < count; i++) {
 		if (outputBuffer->isFull())
 			flushOutput();
-		outputBuffer->put(b % 10 + '0');
-		b /= 10;
+		outputBuffer->put(digits[b % base]);
+		b /= base;
 	}
 }
 
+void thread(void*);
 void init();
 void start();
 void stop();
