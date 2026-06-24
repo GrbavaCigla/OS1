@@ -38,6 +38,8 @@ template <typename T> void print(T x) {
 		count++;
 	} while (x != 0);
 	for (int i = 0; i < count; i++) {
+		if (outputBuffer->isFull())
+			flushOutput();
 		outputBuffer->put(b % 10 + '0');
 		b /= 10;
 	}
