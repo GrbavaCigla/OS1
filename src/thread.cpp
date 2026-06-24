@@ -9,25 +9,32 @@ namespace kernel {
 Thread* Thread::running = nullptr;
 uint64 Thread::ticks = 0;
 
-Thread::Thread(Function function, void* arg, void* stack_space)
+Thread::Thread(Function function, void* arg, void* stack_space, bool privileged)
 	: finished(false), stack(nullptr), function(function), arg(arg) {
 	if (!function)
 		return;
 
 	this->stack = (void*)((uint64)stack_space - DEFAULT_STACK_SIZE);
 	this->context.sp = (uint64)stack_space;
-	this->context.ra = (size_t)(&Thread::wrapper<false>);
+	if (privileged)
+		this->context.ra = (size_t)(&Thread::wrapper<true>);
+	else
+		this->context.ra = (size_t)(&Thread::wrapper<false>);
 }
 
-Thread::Thread(Function function, void* arg)
+Thread::Thread(Function function, void* arg, bool privileged)
 	: finished(false), stack(nullptr), function(function), arg(arg) {
 	if (!function)
 		return;
 
-	size_t allocated = MemoryAllocator::getInstance().allocate(helper::roundUp(DEFAULT_STACK_SIZE));
+	size_t allocated = MemoryAllocator::getInstance().allocate(
+		helper::roundUp(DEFAULT_STACK_SIZE));
 	this->stack = (void*)allocated;
 	this->context.sp = allocated + DEFAULT_STACK_SIZE;
-	this->context.ra = (size_t)(&Thread::wrapper<true>);
+	if (privileged)
+		this->context.ra = (size_t)(&Thread::wrapper<true>);
+	else
+		this->context.ra = (size_t)(&Thread::wrapper<false>);
 }
 
 Thread::Thread()

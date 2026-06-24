@@ -1,10 +1,9 @@
 #include "../h/console.hpp"
-#include "../h/syscall_c.hpp"
 
 namespace kernel::console {
 
-InputBuffer* inputBuffer = nullptr;
-OutputBuffer* outputBuffer = nullptr;
+Buffer<>* inputBuffer = nullptr;
+Buffer<>* outputBuffer = nullptr;
 
 
 void print(const char* s) {
@@ -16,8 +15,8 @@ void print(const char* s) {
 }
 
 void init() {
-	inputBuffer = new InputBuffer();
-	outputBuffer = new OutputBuffer();
+	inputBuffer = new Buffer<>();
+	outputBuffer = new Buffer<>();
 }
 
 } // namespace kernel::console

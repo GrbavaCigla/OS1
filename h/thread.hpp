@@ -13,8 +13,8 @@ class Thread {
 	using Function = void (*)(void*);
 	using Argument = void*;
 
-	Thread(Function function, Argument arg, void* stack_space);
-	Thread(Function function, Argument arg);
+	Thread(Function function, Argument arg, void* stack_space, bool privileged = false);
+	Thread(Function function, Argument arg, bool privileged = false);
 	Thread();
 	~Thread();
 

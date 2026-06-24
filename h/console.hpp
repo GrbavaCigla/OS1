@@ -5,8 +5,8 @@
 
 namespace kernel::console {
 
-extern InputBuffer* inputBuffer;
-extern OutputBuffer* outputBuffer;
+extern Buffer<>* inputBuffer;
+extern Buffer<>* outputBuffer;
 
 inline void flushOutput() {
 	char data = *(char*)CONSOLE_STATUS;
@@ -28,8 +28,7 @@ inline void bufferInput() {
 
 void print(const char* s);
 
-template<typename T>
-void print(T x) {
+template <typename T> void print(T x) {
 	uint64 b = 0;
 	int count = 0;
 	do {

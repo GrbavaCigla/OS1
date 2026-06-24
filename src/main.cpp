@@ -8,31 +8,7 @@
 static volatile bool isUserThreadFinished = false;
 
 static void user(void*) {
-	// // kernel::Logger& logger = kernel::Logger::getInstance();
-
-	// // logger.printFreeMemory();
-
-	// kernel::sys::exitSupervisor();
-	// userMain();
-
-	// // logger.printFreeMemory();
-	putc('a');
-	putc('b');
-	putc('c');
-	putc('d');
-	putc('e');
-	putc('f');
-	putc('g');
-	putc('h');
-	putc('i');
-	putc('j');
-	putc('k');
-	putc('l');
-	putc('m');
-	putc('n');
-	putc('o');
-	putc('\n');
-
+	userMain();
 	isUserThreadFinished = true;
 
 }

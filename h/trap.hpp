@@ -61,6 +61,9 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 		ret = (uint64)console::inputBuffer->get();
 		break;
 	case sys::SyscallCode::ConsolePutChar:
+		if (console::outputBuffer->isFull()) {
+			console::flushOutput();
+		}
 		console::outputBuffer->put(args[0]);
 		break;
 	}
