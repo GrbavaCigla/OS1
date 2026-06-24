@@ -27,7 +27,7 @@ extern "C" void handleSupervisorTrap() {
 			Thread::running->finished = true;
 			Thread::dispatch();
 		} else {
-			helper::print("Kernel panic :(");
+			console::print("Kernel panic :(");
 			sys::exit(ExitStatus::Fail);
 		}
 		break;
@@ -62,8 +62,5 @@ void __attribute__((naked)) contextSwitch(Thread::Context* oldContext,
 					 : "i"(__builtin_offsetof(Thread::Context, ra)),
 					   "i"(__builtin_offsetof(Thread::Context, sp)));
 }
-
-Buffer<BufferType::Input>* inputBuffer = nullptr;
-Buffer<BufferType::Output>* outputBuffer = nullptr;
 
 } // namespace kernel::sys

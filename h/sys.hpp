@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../lib/hw.h"
-#include "buffer.hpp"
+#include "console.hpp"
 #include "thread.hpp"
 
 #define REGISTER_ACCESSOR(name, reg)                                           \
@@ -101,14 +101,10 @@ STATUS_ACCESSOR(SCause, scause, SCauseCode, uint64)
 
 INSTRUCTION(ecall)
 
-extern Buffer<BufferType::Input>* inputBuffer;
-extern Buffer<BufferType::Output>* outputBuffer;
-
 inline void init() {
 	sys::STVec::write((uint64)&supervisorTrap);
 	sys::SStatus::set(sys::SStatusBitmask::SIE);
-	inputBuffer = new Buffer<BufferType::Input>();
-	outputBuffer = new Buffer<BufferType::Output>();
+	console::init();
 }
 
 inline void exit(ExitStatus status) {
