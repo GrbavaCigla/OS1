@@ -6,23 +6,7 @@
 
 static volatile bool userThreadFinished = false;
 
-void user(void*) {
-	userMain();
-	userThreadFinished = true;
-}
-
-int main() {
-	kernel::sys::init();
-
-	kernel::Thread kernelThread = kernel::Thread();
-	kernel::Thread::running = &kernelThread;
-	kernel::Scheduler<kernel::RoundRobin>::getInstance().add(&kernelThread);
-
-	kernel::sys::exitSupervisor();
-
-	thread_t userThread;
-	thread_create(&userThread, user, nullptr);
-
+void console(void*) {
 	while(true) {
 		char data = *(char*)CONSOLE_STATUS;
 		while ((data & (char)CONSOLE_TX_STATUS_BIT) &&
@@ -34,6 +18,22 @@ int main() {
 		thread_dispatch();
 		if (userThreadFinished) break;
 	}
+}
+
+int main() {
+	kernel::sys::init();
+
+	kernel::Thread kernelThread = kernel::Thread();
+	kernel::Thread::running = &kernelThread;
+	kernel::Scheduler<kernel::RoundRobin>::getInstance().add(&kernelThread);
+
+	kernel::sys::exitSupervisor();
+
+	thread_t consoleThread;
+	thread_create(&consoleThread, console, nullptr);
+
+	userMain();
+	userThreadFinished = true;
 
 	kernel::sys::exit(kernel::sys::ExitStatus::Pass);
 
