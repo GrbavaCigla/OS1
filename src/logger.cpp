@@ -114,16 +114,11 @@ void Logger::printSemaphore(Semaphore* sem) {
 	console::print("\n");
 
 	console::print("  blocked threads:\n");
-	Scheduler::ThreadNode* ring = sem->threads;
-	if (!ring)
-		return;
-	Scheduler::ThreadNode* node = ring;
-	do {
+	for (Scheduler::ThreadNode* node = sem->threads; node; node = node->next) {
 		console::print("    thread 0x");
 		console::print((size_t)node->thread, 16);
 		console::print("\n");
-		node = node->next;
-	} while (node != ring);
+	}
 }
 
 void Logger::printSemaphores() {

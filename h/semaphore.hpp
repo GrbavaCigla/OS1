@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../lib/hw.h"
 #include "scheduler.hpp"
 
 namespace kernel {
@@ -28,7 +27,11 @@ class Semaphore {
 	bool closed;
 
   private:
+	void insert(Scheduler::ThreadNode* node);
+	Scheduler::ThreadNode* detach();
+
 	Scheduler::ThreadNode* threads;
+	Scheduler::ThreadNode* threadsTail;
 
 	static Semaphore* head;
 	Semaphore* next;

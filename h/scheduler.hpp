@@ -34,8 +34,9 @@ class Scheduler {
 		Thread* thread;
 		ThreadNode* next;
 		union {
-			ThreadNode* prev;
-			uint64 ticks;
+			ThreadNode* prev; // ready
+			uint64 ticks; // sleep
+			uint64 tokens; // semaphore
 		};
 	};
 

@@ -9,23 +9,48 @@ namespace kernel {
 Semaphore* Semaphore::head = nullptr;
 
 Semaphore::Semaphore(unsigned init)
-	: value((int)init), closed(false), threads(nullptr), next(nullptr),
-	  prev(nullptr) {
+	: value((int)init), closed(false), threads(nullptr), threadsTail(nullptr),
+	  next(nullptr), prev(nullptr) {
 	if (head)
 		head->prev = this;
 	next = head;
 	head = this;
 }
 
+void Semaphore::insert(Scheduler::ThreadNode* node) {
+	node->next = nullptr;
+	if (threadsTail)
+		threadsTail->next = node;
+	else
+		threads = node;
+	threadsTail = node;
+}
+
+Scheduler::ThreadNode* Semaphore::detach() {
+	Scheduler::ThreadNode* node = threads;
+	threads = node->next;
+	if (!threads)
+		threadsTail = nullptr;
+	return node;
+}
+
 int Semaphore::wait(unsigned n) {
 	if (closed)
 		return -1;
-	value -= (int)n;
-	if (value < 0) {
-		Scheduler& sched = Scheduler::getInstance();
-		sched.insert(threads, sched.detach(sched.readyQueue, sched.readyQueue));
-		Thread::dispatch();
+
+	if (value >= (int)n) {
+		value -= (int)n;
+		return 0;
 	}
+
+	Scheduler& sched = Scheduler::getInstance();
+	Scheduler::ThreadNode* node =
+		sched.detach(sched.readyQueue, sched.readyQueue);
+	node->tokens = n;
+	insert(node);
+
+	Thread::dispatch();
+
 	return closed ? -1 : 0;
 }
 
@@ -33,10 +58,12 @@ int Semaphore::signal(unsigned n) {
 	if (closed)
 		return -1;
 	Scheduler& sched = Scheduler::getInstance();
-	for (unsigned i = 0; i < n; i++) {
-		value++;
-		if (value <= 0 && threads)
-			sched.insert(sched.readyQueue, sched.detach(threads, threads));
+	value += (int)n;
+
+	while (threads && value >= (int)threads->tokens) {
+		Scheduler::ThreadNode* node = detach();
+		value -= (int)node->tokens;
+		sched.insert(sched.readyQueue, node);
 	}
 	return 0;
 }
@@ -45,7 +72,7 @@ void Semaphore::close() {
 	closed = true;
 	Scheduler& sched = Scheduler::getInstance();
 	while (threads)
-		sched.insert(sched.readyQueue, sched.detach(threads, threads));
+		sched.insert(sched.readyQueue, detach());
 }
 
 void Semaphore::cleanup() {
