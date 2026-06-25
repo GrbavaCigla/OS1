@@ -52,7 +52,6 @@ class PeriodicThread : public Thread {
 
   private:
 	time_t period;
-	bool terminated;
 };
 
 class Console {

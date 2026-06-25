@@ -44,12 +44,12 @@ int Semaphore::signal() {
 }
 
 PeriodicThread::PeriodicThread(time_t period)
-	: Thread(), period(period), terminated(false) {}
+	: Thread(), period(period) {}
 
-void PeriodicThread::terminate() { terminated = true; }
+void PeriodicThread::terminate() { period = 0; }
 
 void PeriodicThread::run() {
-	while (!terminated) {
+	while (period != 0) {
 		periodicActivation();
 		sleep(period);
 	}
