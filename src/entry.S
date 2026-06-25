@@ -1,8 +1,3 @@
-# Bare-metal entry point. Overrides the _entry in hw.lib's entry.o, which uses
-# a GOT relocation (R_RISCV_GOT_HI20) for `stack0`. In a static bare-metal link
-# that crashes binutils 2.45 (assertion fail in elfnn-riscv.c). This version is
-# identical except it uses PC-relative addressing (la -> auipc+addi), so the
-# linker pulls ours instead of the broken archive member.
 .section .entry_os
 .global _entry
 _entry:
