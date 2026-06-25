@@ -18,7 +18,7 @@ int main() {
 
 	kernel::Thread kernelThread = kernel::Thread();
 	kernel::Thread::running = &kernelThread;
-	kernel::Scheduler<kernel::RoundRobin>::getInstance().add(&kernelThread);
+	kernel::Scheduler::getInstance().add(&kernelThread);
 
 	kernel::sys::exitSupervisor();
 
@@ -36,10 +36,10 @@ int main() {
 
 	kernel::console::stop();
 
-	while (kernel::Scheduler<kernel::RoundRobin>::getInstance().hasPending())
+	while (kernel::Scheduler::getInstance().hasPending())
 		thread_dispatch();
 
-	kernel::Scheduler<kernel::RoundRobin>::getInstance().cleanup();
+	kernel::Scheduler::getInstance().cleanup();
 	kernel::Semaphore::cleanup();
 	kernel::console::print("=== memory after userMain ===\n");
 	kernel::Logger::printFreeChunks();

@@ -68,11 +68,11 @@ void Logger::printThread(Thread* thread) {
 
 void Logger::printReadyThreads() {
 	console::print("Ready threads:\n");
-	Scheduler<RoundRobin>& sched = Scheduler<RoundRobin>::getInstance();
-	Scheduler<RoundRobin>::ThreadNode* ring = sched.readyQueue;
+	Scheduler& sched = Scheduler::getInstance();
+	Scheduler::ThreadNode* ring = sched.readyQueue;
 	if (!ring)
 		return;
-	Scheduler<RoundRobin>::ThreadNode* node = ring;
+	Scheduler::ThreadNode* node = ring;
 	do {
 		printThread(node->thread);
 		node = node->next;
@@ -81,8 +81,8 @@ void Logger::printReadyThreads() {
 
 void Logger::printSleepThreads() {
 	console::print("Sleeping threads:\n");
-	Scheduler<RoundRobin>& sched = Scheduler<RoundRobin>::getInstance();
-	for (Scheduler<RoundRobin>::ThreadNode* node = sched.sleepQueue; node;
+	Scheduler& sched = Scheduler::getInstance();
+	for (Scheduler::ThreadNode* node = sched.sleepQueue; node;
 		 node = node->next) {
 		console::print("  thread 0x");
 		console::print((size_t)node->thread, 16);
@@ -114,10 +114,10 @@ void Logger::printSemaphore(Semaphore* sem) {
 	console::print("\n");
 
 	console::print("  blocked threads:\n");
-	Scheduler<RoundRobin>::ThreadNode* ring = sem->threads;
+	Scheduler::ThreadNode* ring = sem->threads;
 	if (!ring)
 		return;
-	Scheduler<RoundRobin>::ThreadNode* node = ring;
+	Scheduler::ThreadNode* node = ring;
 	do {
 		console::print("    thread 0x");
 		console::print((size_t)node->thread, 16);

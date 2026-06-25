@@ -28,7 +28,7 @@ class Semaphore {
 	bool closed;
 
   private:
-	Scheduler<RoundRobin>::ThreadNode* threads;
+	Scheduler::ThreadNode* threads;
 
 	static Semaphore* head;
 	Semaphore* next;

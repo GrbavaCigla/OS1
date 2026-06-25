@@ -63,7 +63,7 @@ void Thread::operator delete[](void* ptr) noexcept {
 
 void Thread::dispatch() {
 	Thread* oldThread = Thread::running;
-	Thread* newThread = Scheduler<RoundRobin>::getInstance().next();
+	Thread* newThread = Scheduler::getInstance().next();
 
 	if (!newThread || newThread == oldThread)
 		return;

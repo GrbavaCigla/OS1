@@ -22,7 +22,7 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 	case sys::SyscallCode::ThreadCreate: {
 		Thread* thread = new Thread((Thread::Function)args[1],
 									(Thread::Argument)args[2], (void*)args[3]);
-		Scheduler<RoundRobin>::getInstance().add(thread);
+		Scheduler::getInstance().add(thread);
 		*(Thread**)args[0] = thread;
 		break;
 	}
@@ -34,7 +34,7 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 		Thread::dispatch();
 		break;
 	case sys::SyscallCode::ThreadSleep:
-		Scheduler<RoundRobin>::getInstance().sleep(args[0]);
+		Scheduler::getInstance().sleep(args[0]);
 		Thread::dispatch();
 		break;
 	case sys::SyscallCode::SemaphoreOpen: {
@@ -72,10 +72,10 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
 }
 
 inline void handleTimer() {
-	Scheduler<RoundRobin>::getInstance().tick();
+	Scheduler::getInstance().tick();
 	Thread::ticks++;
 	if (Thread::ticks >= DEFAULT_TIME_SLICE) {
-		Scheduler<RoundRobin>::getInstance().cleanup();
+		Scheduler::getInstance().cleanup();
 		// Semaphore::cleanup();
 		Thread::dispatch();
 	}

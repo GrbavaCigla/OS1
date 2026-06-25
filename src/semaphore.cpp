@@ -1,5 +1,6 @@
 #include "../h/semaphore.hpp"
 #include "../h/allocator.hpp"
+#include "../h/helper.hpp"
 #include "../h/scheduler.hpp"
 #include "../h/thread.hpp"
 
@@ -21,7 +22,7 @@ int Semaphore::wait(unsigned n) {
 		return -1;
 	value -= (int)n;
 	if (value < 0) {
-		Scheduler<RoundRobin>& sched = Scheduler<RoundRobin>::getInstance();
+		Scheduler& sched = Scheduler::getInstance();
 		sched.insert(threads, sched.detach(sched.readyQueue, sched.readyQueue));
 		Thread::dispatch();
 	}
@@ -31,7 +32,7 @@ int Semaphore::wait(unsigned n) {
 int Semaphore::signal(unsigned n) {
 	if (closed)
 		return -1;
-	Scheduler<RoundRobin>& sched = Scheduler<RoundRobin>::getInstance();
+	Scheduler& sched = Scheduler::getInstance();
 	for (unsigned i = 0; i < n; i++) {
 		value++;
 		if (value <= 0 && threads)
@@ -42,7 +43,7 @@ int Semaphore::signal(unsigned n) {
 
 void Semaphore::close() {
 	closed = true;
-	Scheduler<RoundRobin>& sched = Scheduler<RoundRobin>::getInstance();
+	Scheduler& sched = Scheduler::getInstance();
 	while (threads)
 		sched.insert(sched.readyQueue, sched.detach(threads, threads));
 }
