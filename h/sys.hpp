@@ -8,7 +8,7 @@
 	struct name {                                                              \
 		static inline uint64 read() {                                          \
 			uint64 val;                                                        \
-			__asm__ volatile("mv %0, " #reg : "=r"(val));                      \
+			__asm__ volatile("mv %0, " #reg : "=r"(val) : : #reg);             \
 			return val;                                                        \
 		}                                                                      \
 		static inline void write(uint64 val) {                                 \
