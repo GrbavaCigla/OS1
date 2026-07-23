@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../lib/hw.h"
-#include "syscall_c.hpp"
+#include "syscall_c.h"
 
 namespace kernel {
 namespace sys {
