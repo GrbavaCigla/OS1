@@ -39,11 +39,11 @@ LD      = ${TOOLPREFIX}ld
 OBJCOPY = ${TOOLPREFIX}objcopy
 OBJDUMP = ${TOOLPREFIX}objdump
 
-ASFLAGS = -march=rv64ima_zicsr -mabi=lp64
+ASFLAGS = -ggdb -march=rv64ima -mabi=lp64
 
 CFLAGS  = -Wall -Werror -Og -ggdb
 CFLAGS += -nostdlib
-CFLAGS += -march=rv64ima_zicsr -mabi=lp64 -mcmodel=medany -mno-relax
+CFLAGS += -march=rv64ima -mabi=lp64 -mcmodel=medany -mno-relax
 CFLAGS += -fno-omit-frame-pointer -ffreestanding -fno-common
 CFLAGS += $(shell ${CC} -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 CFLAGS += ${DEBUG_FLAG}
