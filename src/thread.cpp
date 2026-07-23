@@ -2,7 +2,7 @@
 #include "../h/allocator.hpp"
 #include "../h/scheduler.hpp"
 #include "../h/sys.hpp"
-#include "../h/syscall_c.hpp"
+#include "../h/syscall_c.h"
 
 namespace kernel {
 

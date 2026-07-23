@@ -2,7 +2,7 @@
 #include "../h/logger.hpp"
 #include "../h/scheduler.hpp"
 #include "../h/sys.hpp"
-#include "../h/syscall_c.hpp"
+#include "../h/syscall_c.h"
 #include "../h/thread.hpp"
 #include "../test/userMain.hpp"
 

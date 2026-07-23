@@ -1,6 +1,6 @@
 #pragma once
 
-#include "syscall_c.hpp"
+#include "syscall_c.h"
 
 void* operator new(size_t);
 
