@@ -60,7 +60,7 @@ endif
 
 CXXFLAGS  = -Wall -Werror -Og -ggdb
 CXXFLAGS += -nostdlib -std=c++11
-CXXFLAGS += -march=rv64ima_zicsr -mabi=lp64 -mcmodel=medany -mno-relax
+CXXFLAGS += -march=rv64ima -mabi=lp64 -mcmodel=medany -mno-relax
 CXXFLAGS += -fno-omit-frame-pointer -ffreestanding -fno-common
 CXXFLAGS += -fno-rtti -fno-threadsafe-statics
 #CXXFLAGS += -I./${DIR_LIBS} -I./${DIR_INC}
