@@ -1,0 +1,243 @@
+diff --git a/h/sys.hpp b/h/sys.hpp
+index 03aa7b4..8f64038 100644
+--- a/h/sys.hpp
++++ b/h/sys.hpp
+@@ -60,6 +60,8 @@ enum class SyscallCode : uint64 {
+ 	ThreadCreate = 0x11,
+ 	ThreadExit = 0x12,
+ 	ThreadDispatch = 0x13,
++	ThreadAddChild = 0x14,
++	ThreadJoinAll = 0x15,
+ 	ThreadSleep = 0x31,
+ 	SemaphoreOpen = 0x21,
+ 	SemaphoreClose = 0x22,
+diff --git a/h/syscall_c.h b/h/syscall_c.h
+index 2aab9f9..31d700e 100644
+--- a/h/syscall_c.h
++++ b/h/syscall_c.h
+@@ -23,6 +23,10 @@ int thread_create(thread_t*, void (*)(void*), void*);
+ 
+ int thread_exit();
+ 
++void thread_add_child(thread_t child);
++
++void thread_join_all();
++
+ void thread_dispatch();
+ 
+ int time_sleep(time_t);
+diff --git a/h/syscall_cpp.hpp b/h/syscall_cpp.hpp
+index 1fe1215..1fa58c4 100644
+--- a/h/syscall_cpp.hpp
++++ b/h/syscall_cpp.hpp
+@@ -17,6 +17,8 @@ class Thread {
+ 	int start();
+ 	static void dispatch();
+ 	static int sleep(time_t);
++	void addChild(Thread*);
++	void joinAll();
+ 
+   protected:
+ 	Thread();
+diff --git a/h/thread.hpp b/h/thread.hpp
+index dc2b76e..57dec4d 100644
+--- a/h/thread.hpp
++++ b/h/thread.hpp
+@@ -24,6 +24,9 @@ class Thread {
+ 	static void operator delete[](void*) noexcept;
+ 
+ 	bool finished;
++	Semaphore *parent;
++	Semaphore *child;
++	uint64 count;
+ 
+ 	struct Context {
+ 		uint64 ra;
+diff --git a/h/trap.hpp b/h/trap.hpp
+index ce4d39e..239c5eb 100644
+--- a/h/trap.hpp
++++ b/h/trap.hpp
+@@ -27,9 +27,20 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
+ 		break;
+ 	}
+ 	case sys::SyscallCode::ThreadExit:
++		if (Thread::running->child != nullptr)
++			Thread::running->child->signal();
+ 		Thread::running->finished = true;
+ 		Thread::dispatch();
+ 		break;
++	case sys::SyscallCode::ThreadAddChild: {
++		((Thread*)args[0])->child = Thread::running->parent;
++		Thread::running->count++;
++		break;
++	}
++	case sys::SyscallCode::ThreadJoinAll: {
++		Thread::running->parent->wait(Thread::running->count);
++		break;
++	}
+ 	case sys::SyscallCode::ThreadDispatch:
+ 		Thread::dispatch();
+ 		break;
+diff --git a/src/main.cpp b/src/main.cpp
+index d8693ef..d2f9b93 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -1,5 +1,4 @@
+ #include "../h/console.hpp"
+-#include "../h/logger.hpp"
+ #include "../h/scheduler.hpp"
+ #include "../h/sys.hpp"
+ #include "../h/syscall_c.h"
+@@ -8,8 +7,59 @@
+ 
+ static volatile bool isUserThreadFinished = false;
+ 
++void threadC(void* arg) {
++	int id = (int)(uint64)arg;
++	kernel::console::print("C");
++	kernel::console::print(id);
++	kernel::console::print(" started\n");
++	kernel::console::print("C");
++	kernel::console::print(id);
++	kernel::console::print(" finished\n");
++}
++
++void threadB(void* arg) {
++	int id = (int)(uint64)arg;
++	kernel::console::print("B");
++	kernel::console::print(id);
++	kernel::console::print(" started\n");
++
++	thread_t c[3];
++	for (int i = 0; i < 3; i++) {
++		thread_create(&c[i], threadC, (void*)(uint64)(id * 10 + i));
++		thread_add_child(c[i]);
++	}
++
++	thread_join_all();
++
++	kernel::console::print("B");
++	kernel::console::print(id);
++	kernel::console::print(" joined its children, finished\n");
++}
++
++void threadA(void*) {
++	kernel::console::print("A started\n");
++
++	thread_t b[3];
++	for (int i = 0; i < 3; i++) {
++		thread_create(&b[i], threadB, (void*)(uint64)i);
++		thread_add_child(b[i]);
++	}
++
++	thread_t c;
++	thread_create(&c, threadC, (void*)(uint64)99);
++	thread_add_child(c);
++
++	thread_join_all();
++
++	kernel::console::print("A joined its children, finished\n");
++}
++
+ void user(void*) {
+-	userMain();
++	thread_t a;
++	thread_create(&a, threadA, nullptr);
++	thread_add_child(a);
++	thread_join_all();
++
+ 	isUserThreadFinished = true;
+ }
+ 
+@@ -22,10 +72,6 @@ int main() {
+ 
+ 	kernel::sys::exitSupervisor();
+ 
+-	kernel::console::print("=== memory before userMain ===\n");
+-	kernel::Logger::printFreeChunks();
+-	kernel::Logger::printAllocationHeaders();
+-
+ 	kernel::console::start();
+ 
+ 	thread_t userThread;
+@@ -39,12 +85,6 @@ int main() {
+ 	while (kernel::Scheduler::getInstance().hasPending())
+ 		thread_dispatch();
+ 
+-	kernel::Scheduler::getInstance().cleanup();
+-	kernel::Semaphore::cleanup();
+-	kernel::console::print("=== memory after userMain ===\n");
+-	kernel::Logger::printFreeChunks();
+-	kernel::Logger::printAllocationHeaders();
+-
+ 	kernel::console::flushOutput();
+ 	kernel::sys::exit(kernel::sys::ExitStatus::Pass);
+ 
+diff --git a/src/syscall_c.cpp b/src/syscall_c.cpp
+index 998346c..f0dbc3c 100644
+--- a/src/syscall_c.cpp
++++ b/src/syscall_c.cpp
+@@ -41,6 +41,17 @@ int thread_exit() {
+ 	return A0::read();
+ }
+ 
++void thread_add_child(thread_t child) {
++	A0::write((uint64)SyscallCode::ThreadAddChild);
++	A1::write((uint64)child);
++	ecall();
++}
++
++void thread_join_all() {
++	A0::write((uint64)SyscallCode::ThreadJoinAll);
++	ecall();
++}
++
+ void thread_dispatch() {
+ 	A0::write((uint64)SyscallCode::ThreadDispatch);
+ 	ecall();
+diff --git a/src/syscall_cpp.cpp b/src/syscall_cpp.cpp
+index add0285..c91b513 100644
+--- a/src/syscall_cpp.cpp
++++ b/src/syscall_cpp.cpp
+@@ -25,6 +25,10 @@ int Thread::start() {
+ 
+ void Thread::dispatch() { thread_dispatch(); }
+ 
++void Thread::addChild(Thread* child) { thread_add_child(child->myHandle); }
++
++void Thread::joinAll() { thread_join_all(); }
++
+ int Thread::sleep(time_t period) { return time_sleep(period); }
+ 
+ Semaphore::Semaphore(unsigned init) : myHandle(nullptr) {
+diff --git a/src/thread.cpp b/src/thread.cpp
+index 7e1fc4b..84d6d83 100644
+--- a/src/thread.cpp
++++ b/src/thread.cpp
+@@ -10,7 +10,7 @@ Thread* Thread::running = nullptr;
+ uint64 Thread::ticks = 0;
+ 
+ Thread::Thread(Function function, void* arg, void* stack_space, bool privileged)
+-	: finished(false), stack(nullptr), function(function), arg(arg) {
++	: finished(false), parent(new Semaphore(0)), child(nullptr), count(0), stack(nullptr), function(function), arg(arg) {
+ 	if (!function)
+ 		return;
+ 
+@@ -23,7 +23,7 @@ Thread::Thread(Function function, void* arg, void* stack_space, bool privileged)
+ }
+ 
+ Thread::Thread(Function function, void* arg, bool privileged)
+-	: finished(false), stack(nullptr), function(function), arg(arg) {
++	: finished(false), parent(new Semaphore(0)), child(nullptr), count(0), stack(nullptr), function(function), arg(arg) {
+ 	if (!function)
+ 		return;
+ 
+@@ -38,7 +38,7 @@ Thread::Thread(Function function, void* arg, bool privileged)
+ }
+ 
+ Thread::Thread()
+-	: finished(false), stack(nullptr), function(nullptr), arg(nullptr),
++	: finished(false), parent(new Semaphore(0)), child(nullptr), count(0), stack(nullptr), function(nullptr), arg(nullptr),
+ 	  context({.ra = 0, .sp = 0}) {}
+ 
+ Thread::~Thread() { MemoryAllocator::getInstance().free((size_t)stack); }

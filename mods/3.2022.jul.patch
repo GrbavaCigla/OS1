@@ -1,0 +1,164 @@
+diff --git a/h/sys.hpp b/h/sys.hpp
+index 03aa7b4..3c46b25 100644
+--- a/h/sys.hpp
++++ b/h/sys.hpp
+@@ -59,6 +59,7 @@ enum class SyscallCode : uint64 {
+ 	MemoryFree = 0x02,
+ 	ThreadCreate = 0x11,
+ 	ThreadExit = 0x12,
++	ThreadID = 0x14,
+ 	ThreadDispatch = 0x13,
+ 	ThreadSleep = 0x31,
+ 	SemaphoreOpen = 0x21,
+diff --git a/h/syscall_c.h b/h/syscall_c.h
+index 2aab9f9..b43568f 100644
+--- a/h/syscall_c.h
++++ b/h/syscall_c.h
+@@ -23,6 +23,8 @@ int thread_create(thread_t*, void (*)(void*), void*);
+ 
+ int thread_exit();
+ 
++int thread_id();
++
+ void thread_dispatch();
+ 
+ int time_sleep(time_t);
+diff --git a/h/thread.hpp b/h/thread.hpp
+index dc2b76e..0a34da4 100644
+--- a/h/thread.hpp
++++ b/h/thread.hpp
+@@ -25,6 +25,9 @@ class Thread {
+ 
+ 	bool finished;
+ 
++	static int globalID;
++	int id;
++
+ 	struct Context {
+ 		uint64 ra;
+ 		uint64 sp;
+diff --git a/h/trap.hpp b/h/trap.hpp
+index ce4d39e..aea4a95 100644
+--- a/h/trap.hpp
++++ b/h/trap.hpp
+@@ -30,6 +30,10 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
+ 		Thread::running->finished = true;
+ 		Thread::dispatch();
+ 		break;
++	case sys::SyscallCode::ThreadID:
++		ret = Thread::running->id;
++		Thread::dispatch();
++		break;
+ 	case sys::SyscallCode::ThreadDispatch:
+ 		Thread::dispatch();
+ 		break;
+diff --git a/src/main.cpp b/src/main.cpp
+index d8693ef..ed5d40b 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -8,9 +8,26 @@
+ 
+ static volatile bool isUserThreadFinished = false;
+ 
++void worker(void* arg) {
++	char c = (char)(uint64)arg;
++	for (int i = 0; i < 10; i++) {
++		kernel::console::print(c);
++		kernel::console::print(" ");
++		kernel::console::print(thread_id());
++		kernel::console::print("\n");
++		time_sleep(1);
++	}
++}
++
+ void user(void*) {
+-	userMain();
+-	isUserThreadFinished = true;
++	thread_t a, b, c;
++	thread_create(&a, worker, (void*)'a');
++	thread_create(&b, worker, (void*)'b');
++	thread_create(&c, worker, (void*)'c');
++
++	while(true) {
++		thread_dispatch();
++	}
+ }
+ 
+ int main() {
+@@ -22,9 +39,9 @@ int main() {
+ 
+ 	kernel::sys::exitSupervisor();
+ 
+-	kernel::console::print("=== memory before userMain ===\n");
+-	kernel::Logger::printFreeChunks();
+-	kernel::Logger::printAllocationHeaders();
++	// kernel::console::print("=== memory before userMain ===\n");
++	// kernel::Logger::printFreeChunks();
++	// kernel::Logger::printAllocationHeaders();
+ 
+ 	kernel::console::start();
+ 
+@@ -41,9 +58,9 @@ int main() {
+ 
+ 	kernel::Scheduler::getInstance().cleanup();
+ 	kernel::Semaphore::cleanup();
+-	kernel::console::print("=== memory after userMain ===\n");
+-	kernel::Logger::printFreeChunks();
+-	kernel::Logger::printAllocationHeaders();
++	// kernel::console::print("=== memory after userMain ===\n");
++	// kernel::Logger::printFreeChunks();
++	// kernel::Logger::printAllocationHeaders();
+ 
+ 	kernel::console::flushOutput();
+ 	kernel::sys::exit(kernel::sys::ExitStatus::Pass);
+diff --git a/src/syscall_c.cpp b/src/syscall_c.cpp
+index 998346c..7233bb9 100644
+--- a/src/syscall_c.cpp
++++ b/src/syscall_c.cpp
+@@ -35,6 +35,12 @@ int thread_create(thread_t* handle, void (*start_routine)(void*), void* arg) {
+ 	return (int)A0::read();
+ }
+ 
++int thread_id() {
++	A0::write((uint64)SyscallCode::ThreadID);
++	ecall();
++	return A0::read();
++}
++
+ int thread_exit() {
+ 	A0::write((uint64)SyscallCode::ThreadExit);
+ 	ecall();
+diff --git a/src/thread.cpp b/src/thread.cpp
+index 7e1fc4b..c9d7069 100644
+--- a/src/thread.cpp
++++ b/src/thread.cpp
+@@ -8,9 +8,10 @@ namespace kernel {
+ 
+ Thread* Thread::running = nullptr;
+ uint64 Thread::ticks = 0;
++int Thread::globalID = 0;
+ 
+ Thread::Thread(Function function, void* arg, void* stack_space, bool privileged)
+-	: finished(false), stack(nullptr), function(function), arg(arg) {
++	: finished(false), id(globalID++), stack(nullptr), function(function), arg(arg) {
+ 	if (!function)
+ 		return;
+ 
+@@ -23,7 +24,7 @@ Thread::Thread(Function function, void* arg, void* stack_space, bool privileged)
+ }
+ 
+ Thread::Thread(Function function, void* arg, bool privileged)
+-	: finished(false), stack(nullptr), function(function), arg(arg) {
++	: finished(false), id(globalID++), stack(nullptr), function(function), arg(arg) {
+ 	if (!function)
+ 		return;
+ 
+@@ -38,7 +39,7 @@ Thread::Thread(Function function, void* arg, bool privileged)
+ }
+ 
+ Thread::Thread()
+-	: finished(false), stack(nullptr), function(nullptr), arg(nullptr),
++	: finished(false), id(globalID++), stack(nullptr), function(nullptr), arg(nullptr),
+ 	  context({.ra = 0, .sp = 0}) {}
+ 
+ Thread::~Thread() { MemoryAllocator::getInstance().free((size_t)stack); }

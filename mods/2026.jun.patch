@@ -1,0 +1,294 @@
+diff --git a/h/semaphore.hpp b/h/semaphore.hpp
+index a953af8..a09fa3d 100644
+--- a/h/semaphore.hpp
++++ b/h/semaphore.hpp
+@@ -22,10 +22,16 @@ class Semaphore {
+ 	int signal(unsigned n = 1);
+ 	void close();
+ 	static void cleanup();
++	void addPaired(Semaphore*);
+ 
+ 	int value;
+ 	bool closed;
+ 
++	struct SemaphoreNode {
++		Semaphore* node;
++		SemaphoreNode* next;
++	};
++
+   private:
+ 	void insert(Scheduler::ThreadNode* node);
+ 	Scheduler::ThreadNode* detach();
+@@ -36,6 +42,8 @@ class Semaphore {
+ 	static Semaphore* head;
+ 	Semaphore* next;
+ 	Semaphore* prev;
++
++	SemaphoreNode* paired;
+ };
+ 
+ } // namespace kernel
+diff --git a/h/sys.hpp b/h/sys.hpp
+index 03aa7b4..9d2a41d 100644
+--- a/h/sys.hpp
++++ b/h/sys.hpp
+@@ -67,6 +67,7 @@ enum class SyscallCode : uint64 {
+ 	SemaphoreSignal = 0x24,
+ 	SemaphoreWaitN = 0x25,
+ 	SemaphoreSignalN = 0x26,
++	SemaphorePair = 0x27,
+ 	ConsoleGetChar = 0x41,
+ 	ConsolePutChar = 0x42,
+ };
+diff --git a/h/syscall_c.h b/h/syscall_c.h
+index 2aab9f9..ed8b06b 100644
+--- a/h/syscall_c.h
++++ b/h/syscall_c.h
+@@ -39,6 +39,8 @@ int sem_wait_n(sem_t, unsigned);
+ 
+ int sem_signal_n(sem_t, unsigned);
+ 
++int sem_pair(sem_t, sem_t);
++
+ char getc();
+ 
+ void putc(char);
+diff --git a/h/syscall_cpp.hpp b/h/syscall_cpp.hpp
+index 1fe1215..458ab46 100644
+--- a/h/syscall_cpp.hpp
++++ b/h/syscall_cpp.hpp
+@@ -36,6 +36,7 @@ class Semaphore {
+ 	virtual ~Semaphore();
+ 	int wait();
+ 	int signal();
++	static void pair(Semaphore*, Semaphore*);
+ 
+   private:
+ 	sem_t myHandle;
+diff --git a/h/trap.hpp b/h/trap.hpp
+index ce4d39e..37ac33a 100644
+--- a/h/trap.hpp
++++ b/h/trap.hpp
+@@ -66,6 +66,12 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
+ 		}
+ 		console::outputBuffer->put(args[0]);
+ 		break;
++	case SyscallCode::SemaphorePair: {
++		Semaphore* s1 = (Semaphore*)args[0];
++		Semaphore* s2 = (Semaphore*)args[1];
++		s1->addPaired(s2);
++		s2->addPaired(s1);
++	}
+ 	}
+ 
+ 	return ret;
+diff --git a/src/main.cpp b/src/main.cpp
+index d8693ef..ca955de 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -3,13 +3,97 @@
+ #include "../h/scheduler.hpp"
+ #include "../h/sys.hpp"
+ #include "../h/syscall_c.h"
++#include "../h/syscall_cpp.hpp"
+ #include "../h/thread.hpp"
+ #include "../test/userMain.hpp"
+ 
+ static volatile bool isUserThreadFinished = false;
+ 
++// ---- Semaphore pairing test (C++ API only) ----
++//
++// 6 semaphores: one "main" with value 100, paired with 5 ordinary sems
++// whose values are 1,2,3,4,5. Thread i (id-based) waits on its own sem
++// 5 times. Once its own tokens run out, wait() falls back to the paired
++// main sem (which has plenty), and reports that it went via a paired sem.
++//
++// Expected paired-wait count per thread = max(0, 5 - initialValue):
++//   sem value 1 -> 4 paired, 2 -> 3, 3 -> 2, 4 -> 1, 5 -> 0. Total = 10.
++//
++// wait() contract assumed: returns 1 if satisfied via a paired semaphore,
++// 0 if via its own sem (or after blocking).
++
++static const int WORKERS = 5;
++
++static Semaphore* mainSem;
++static Semaphore* sems[WORKERS];
++
++static Semaphore* mutex;           // guards pairedTotal + output grouping
++static volatile int pairedTotal = 0;
++static volatile int doneCount = 0;
++
++class PairWorker : public Thread {
++	Semaphore* mine;
++	int id;
++
++  public:
++	PairWorker(Semaphore* mine, int id) : Thread(), mine(mine), id(id) {}
++
++	void run() override {
++		for (int i = 0; i < 5; i++) {
++			int viaPaired = mine->wait();
++
++			mutex->wait();
++			kernel::console::print("thread id=");
++			kernel::console::print(id);
++			kernel::console::print(" iter=");
++			kernel::console::print(i);
++			kernel::console::print(viaPaired ? " wait via PAIRED sem\n"
++											 : " wait via OWN sem\n");
++			if (viaPaired)
++				pairedTotal++;
++			mutex->signal();
++
++			Thread::sleep(2);
++		}
++
++		mutex->wait();
++		doneCount++;
++		mutex->signal();
++	}
++};
++
++void pairTest() {
++	mutex = new Semaphore(1);
++	mainSem = new Semaphore(100);
++
++	for (int i = 0; i < WORKERS; i++) {
++		sems[i] = new Semaphore(i + 1);   // values 1,2,3,4,5
++		Semaphore::pair(mainSem, sems[i]);
++	}
++
++	PairWorker* workers[WORKERS];
++	for (int i = 0; i < WORKERS; i++) {
++		workers[i] = new PairWorker(sems[i], i + 1);
++		workers[i]->start();
++	}
++
++	while (doneCount < WORKERS)
++		Thread::dispatch();
++
++	kernel::console::print("total waits via paired sems = ");
++	kernel::console::print(pairedTotal);
++	kernel::console::print(" (expected 10)\n");
++
++	for (int i = 0; i < WORKERS; i++)
++		delete workers[i];
++	for (int i = 0; i < WORKERS; i++)
++		delete sems[i];
++	delete mainSem;
++	delete mutex;
++}
++
+ void user(void*) {
+-	userMain();
++	pairTest();
+ 	isUserThreadFinished = true;
+ }
+ 
+diff --git a/src/semaphore.cpp b/src/semaphore.cpp
+index 1c3fe21..75496eb 100644
+--- a/src/semaphore.cpp
++++ b/src/semaphore.cpp
+@@ -1,5 +1,6 @@
+ #include "../h/semaphore.hpp"
+ #include "../h/allocator.hpp"
++#include "../h/console.hpp"
+ #include "../h/helper.hpp"
+ #include "../h/scheduler.hpp"
+ #include "../h/thread.hpp"
+@@ -10,7 +11,7 @@ Semaphore* Semaphore::head = nullptr;
+ 
+ Semaphore::Semaphore(unsigned init)
+ 	: value((int)init), closed(false), threads(nullptr), threadsTail(nullptr),
+-	  next(nullptr), prev(nullptr) {
++	  next(nullptr), prev(nullptr), paired(nullptr) {
+ 	if (head)
+ 		head->prev = this;
+ 	next = head;
+@@ -43,6 +44,15 @@ int Semaphore::wait(unsigned n) {
+ 		return 0;
+ 	}
+ 
++	Semaphore::SemaphoreNode* current = paired;
++	while(current != nullptr) {
++		if (current->node->value >= (int)n) {
++			current->node->value -= (int)n;
++			return 1;
++		}
++		current = current->next;
++	}
++
+ 	Scheduler& sched = Scheduler::getInstance();
+ 	Scheduler::ThreadNode* node =
+ 		sched.detach(sched.readyQueue, sched.readyQueue);
+@@ -93,14 +103,31 @@ Semaphore::~Semaphore() {
+ 		next->prev = prev;
+ }
+ 
++void Semaphore::addPaired(Semaphore* s) {
++	MemoryAllocator& m = MemoryAllocator::getInstance();
++	Semaphore::SemaphoreNode* node =
++		(Semaphore::SemaphoreNode*)m.allocate(sizeof(Semaphore::SemaphoreNode));
++	node->node = s;
++	node->next = nullptr;
++
++	if (paired == nullptr) {
++		paired = node;
++	} else {
++		Semaphore::SemaphoreNode* current = paired;
++		while (current->next != nullptr)
++			current = current->next;
++		current->next = node;
++	}
++}
++
+ void* Semaphore::operator new(size_t size) {
+-	return (void*)MemoryAllocator::getInstance().allocate(
+-		helper::roundUp(size), 's');
++	return (void*)MemoryAllocator::getInstance().allocate(helper::roundUp(size),
++														  's');
+ }
+ 
+ void* Semaphore::operator new[](size_t size) {
+-	return (void*)MemoryAllocator::getInstance().allocate(
+-		helper::roundUp(size), 'S');
++	return (void*)MemoryAllocator::getInstance().allocate(helper::roundUp(size),
++														  'S');
+ }
+ 
+ void Semaphore::operator delete(void* ptr) noexcept {
+diff --git a/src/syscall_c.cpp b/src/syscall_c.cpp
+index 998346c..3809f18 100644
+--- a/src/syscall_c.cpp
++++ b/src/syscall_c.cpp
+@@ -98,6 +98,14 @@ int sem_signal_n(sem_t handle, unsigned n) {
+ 	return (int)A0::read();
+ }
+ 
++int sem_pair(sem_t s1, sem_t s2) {
++	A0::write((uint64)SyscallCode::SemaphorePair);
++	A1::write((uint64)s1);
++	A2::write((uint64)s2);
++	ecall();
++	return (int)A0::read();
++}
++
+ char getc() {
+ 	A0::write((uint64)SyscallCode::ConsoleGetChar);
+ 	ecall();
+diff --git a/src/syscall_cpp.cpp b/src/syscall_cpp.cpp
+index add0285..e2cc7d7 100644
+--- a/src/syscall_cpp.cpp
++++ b/src/syscall_cpp.cpp
+@@ -43,6 +43,11 @@ int Semaphore::signal() {
+ 	return sem_signal(myHandle);
+ }
+ 
++void Semaphore::pair(Semaphore* s1, Semaphore* s2) {
++	sem_pair(s1->myHandle, s2->myHandle);
++}
++
++
+ PeriodicThread::PeriodicThread(time_t period)
+ 	: Thread(), period(period) {}
+ 

@@ -1,0 +1,226 @@
+diff --git a/h/sys.hpp b/h/sys.hpp
+index 03aa7b4..841be6c 100644
+--- a/h/sys.hpp
++++ b/h/sys.hpp
+@@ -60,6 +60,7 @@ enum class SyscallCode : uint64 {
+ 	ThreadCreate = 0x11,
+ 	ThreadExit = 0x12,
+ 	ThreadDispatch = 0x13,
++	ThreadJoin = 0x14,
+ 	ThreadSleep = 0x31,
+ 	SemaphoreOpen = 0x21,
+ 	SemaphoreClose = 0x22,
+diff --git a/h/syscall_c.h b/h/syscall_c.h
+index 2aab9f9..d6c54a5 100644
+--- a/h/syscall_c.h
++++ b/h/syscall_c.h
+@@ -23,6 +23,8 @@ int thread_create(thread_t*, void (*)(void*), void*);
+ 
+ int thread_exit();
+ 
++void thread_join(thread_t);
++
+ void thread_dispatch();
+ 
+ int time_sleep(time_t);
+diff --git a/h/syscall_cpp.hpp b/h/syscall_cpp.hpp
+index 1fe1215..9054299 100644
+--- a/h/syscall_cpp.hpp
++++ b/h/syscall_cpp.hpp
+@@ -17,6 +17,7 @@ class Thread {
+ 	int start();
+ 	static void dispatch();
+ 	static int sleep(time_t);
++	void join();
+ 
+   protected:
+ 	Thread();
+diff --git a/h/thread.hpp b/h/thread.hpp
+index dc2b76e..e5f9cd4 100644
+--- a/h/thread.hpp
++++ b/h/thread.hpp
+@@ -13,7 +13,8 @@ class Thread {
+ 	using Function = void (*)(void*);
+ 	using Argument = void*;
+ 
+-	Thread(Function function, Argument arg, void* stack_space, bool privileged = false);
++	Thread(Function function, Argument arg, void* stack_space,
++		   bool privileged = false);
+ 	Thread(Function function, Argument arg, bool privileged = false);
+ 	Thread();
+ 	~Thread();
+@@ -30,7 +31,13 @@ class Thread {
+ 		uint64 sp;
+ 	};
+ 
++	struct SemaphoreNode {
++		Semaphore* sem;
++		SemaphoreNode* next;
++	};
++
+ 	static Thread* running;
++	SemaphoreNode* head = nullptr;
+ 
+ 	static uint64 ticks;
+ 
+diff --git a/h/trap.hpp b/h/trap.hpp
+index ce4d39e..d635b55 100644
+--- a/h/trap.hpp
++++ b/h/trap.hpp
+@@ -26,13 +26,44 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
+ 		*(Thread**)args[0] = thread;
+ 		break;
+ 	}
+-	case sys::SyscallCode::ThreadExit:
++	case sys::SyscallCode::ThreadExit: {
+ 		Thread::running->finished = true;
++		Thread::SemaphoreNode* s = Thread::running->head;
++		while(s != nullptr) {
++			s->sem->close();
++			Thread::SemaphoreNode* old = s;
++			s = s->next;
++			MemoryAllocator::getInstance().free((size_t)old);
++		}
+ 		Thread::dispatch();
+ 		break;
++	}
+ 	case sys::SyscallCode::ThreadDispatch:
+ 		Thread::dispatch();
+ 		break;
++	case sys::SyscallCode::ThreadJoin: {
++		if (((Thread*)args[0])->finished)
++			break;
++
++		MemoryAllocator& m = MemoryAllocator::getInstance();
++		size_t s = sizeof(Thread::SemaphoreNode);
++
++		Thread::SemaphoreNode* current = ((Thread*)args[0])->head;
++		Semaphore* sem = new Semaphore(0);
++		Thread::SemaphoreNode* node = (Thread::SemaphoreNode*)m.allocate(s);
++		node->sem = sem;
++		node->next = 0;
++
++		if (current == nullptr) {
++			((Thread*)args[0])->head = node;
++		} else {
++			while (current->next != nullptr)
++				current = current->next;
++			current->next = node;
++		}
++		sem->wait();
++		break;
++	}
+ 	case sys::SyscallCode::ThreadSleep:
+ 		Scheduler::getInstance().sleep(args[0]);
+ 		Thread::dispatch();
+diff --git a/src/main.cpp b/src/main.cpp
+index d8693ef..9fe3045 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -3,16 +3,42 @@
+ #include "../h/scheduler.hpp"
+ #include "../h/sys.hpp"
+ #include "../h/syscall_c.h"
++#include "../h/syscall_cpp.hpp"
+ #include "../h/thread.hpp"
+ #include "../test/userMain.hpp"
+ 
+ static volatile bool isUserThreadFinished = false;
++struct Handles { Thread* a; Thread* b; };
+ 
+-void user(void*) {
+-	userMain();
++void workerA(void* arg) {
++	kernel::console::print((char)(uint64)arg);
++	kernel::console::print(" start\n");
++	for(volatile int i = 0; i < 1000000000; i++) {
++		(void)i;
++	}
++	kernel::console::print((char)(uint64)arg);
++	kernel::console::print(" done\n");
++}
++
++void workerB(void* arg) {
++	Handles* h = (Handles*)arg;
++	h->a->join();
++	kernel::console::print("joined1\n");
++	h->b->join();
++	kernel::console::print("joined2\n");
+ 	isUserThreadFinished = true;
+ }
+ 
++void user(void*) {
++	Thread* a = new Thread(workerA, (void*)'a');
++	Thread* b = new Thread(workerA, (void*)'b');
++	Thread* c = new Thread(workerB, new Handles { a, b });
++	
++	a->start();
++	b->start();
++	c->start();
++}
++
+ int main() {
+ 	kernel::sys::init();
+ 
+@@ -22,9 +48,9 @@ int main() {
+ 
+ 	kernel::sys::exitSupervisor();
+ 
+-	kernel::console::print("=== memory before userMain ===\n");
+-	kernel::Logger::printFreeChunks();
+-	kernel::Logger::printAllocationHeaders();
++	// kernel::console::print("=== memory before userMain ===\n");
++	// kernel::Logger::printFreeChunks();
++	// kernel::Logger::printAllocationHeaders();
+ 
+ 	kernel::console::start();
+ 
+@@ -39,11 +65,11 @@ int main() {
+ 	while (kernel::Scheduler::getInstance().hasPending())
+ 		thread_dispatch();
+ 
+-	kernel::Scheduler::getInstance().cleanup();
+-	kernel::Semaphore::cleanup();
+-	kernel::console::print("=== memory after userMain ===\n");
+-	kernel::Logger::printFreeChunks();
+-	kernel::Logger::printAllocationHeaders();
++	// kernel::Scheduler::getInstance().cleanup();
++	// kernel::Semaphore::cleanup();
++	// kernel::console::print("=== memory after userMain ===\n");
++	// kernel::Logger::printFreeChunks();
++	// kernel::Logger::printAllocationHeaders();
+ 
+ 	kernel::console::flushOutput();
+ 	kernel::sys::exit(kernel::sys::ExitStatus::Pass);
+diff --git a/src/syscall_c.cpp b/src/syscall_c.cpp
+index 998346c..d7871ea 100644
+--- a/src/syscall_c.cpp
++++ b/src/syscall_c.cpp
+@@ -41,6 +41,12 @@ int thread_exit() {
+ 	return A0::read();
+ }
+ 
++void thread_join(thread_t handle) {
++	A0::write((uint64)SyscallCode::ThreadJoin);
++	A1::write((uint64)handle);
++	ecall();
++}
++
+ void thread_dispatch() {
+ 	A0::write((uint64)SyscallCode::ThreadDispatch);
+ 	ecall();
+diff --git a/src/syscall_cpp.cpp b/src/syscall_cpp.cpp
+index add0285..cdf0b10 100644
+--- a/src/syscall_cpp.cpp
++++ b/src/syscall_cpp.cpp
+@@ -23,6 +23,10 @@ int Thread::start() {
+ 	return thread_create(&myHandle, &Thread::runWrapper, this);
+ }
+ 
++void Thread::join() {
++	thread_join(myHandle);
++}
++
+ void Thread::dispatch() { thread_dispatch(); }
+ 
+ int Thread::sleep(time_t period) { return time_sleep(period); }

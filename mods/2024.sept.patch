@@ -1,0 +1,224 @@
+diff --git a/h/sys.hpp b/h/sys.hpp
+index 03aa7b4..1ffec10 100644
+--- a/h/sys.hpp
++++ b/h/sys.hpp
+@@ -60,6 +60,8 @@ enum class SyscallCode : uint64 {
+ 	ThreadCreate = 0x11,
+ 	ThreadExit = 0x12,
+ 	ThreadDispatch = 0x13,
++	ThreadPair = 0x14,
++	ThreadSync = 0x15,
+ 	ThreadSleep = 0x31,
+ 	SemaphoreOpen = 0x21,
+ 	SemaphoreClose = 0x22,
+diff --git a/h/syscall_c.h b/h/syscall_c.h
+index 2aab9f9..d9196e2 100644
+--- a/h/syscall_c.h
++++ b/h/syscall_c.h
+@@ -25,6 +25,10 @@ int thread_exit();
+ 
+ void thread_dispatch();
+ 
++void thread_sync();
++
++void thread_pair(thread_t, thread_t);
++
+ int time_sleep(time_t);
+ 
+ int sem_open(sem_t*, unsigned);
+diff --git a/h/syscall_cpp.hpp b/h/syscall_cpp.hpp
+index 1fe1215..e45e709 100644
+--- a/h/syscall_cpp.hpp
++++ b/h/syscall_cpp.hpp
+@@ -17,6 +17,8 @@ class Thread {
+ 	int start();
+ 	static void dispatch();
+ 	static int sleep(time_t);
++	static void pair(Thread* t1, Thread* t2);
++	void sync();
+ 
+   protected:
+ 	Thread();
+diff --git a/h/thread.hpp b/h/thread.hpp
+index dc2b76e..0e56b0e 100644
+--- a/h/thread.hpp
++++ b/h/thread.hpp
+@@ -30,6 +30,9 @@ class Thread {
+ 		uint64 sp;
+ 	};
+ 
++	Thread* other;
++	Semaphore* sync;
++
+ 	static Thread* running;
+ 
+ 	static uint64 ticks;
+diff --git a/h/trap.hpp b/h/trap.hpp
+index ce4d39e..bd2896a 100644
+--- a/h/trap.hpp
++++ b/h/trap.hpp
+@@ -37,6 +37,18 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
+ 		Scheduler::getInstance().sleep(args[0]);
+ 		Thread::dispatch();
+ 		break;
++	case sys::SyscallCode::ThreadPair: {
++		Thread* t1 = (Thread*)args[0];
++		Thread* t2 = (Thread*)args[1];
++		t1->other = t2;
++		t2->other = t1;
++		break;
++	}
++	case sys::SyscallCode::ThreadSync: {
++		Thread::running->other->sync->signal();
++		Thread::running->sync->wait();
++		break;
++	}
+ 	case sys::SyscallCode::SemaphoreOpen: {
+ 		Semaphore* sem = new Semaphore((unsigned)args[1]);
+ 		*(Semaphore**)args[0] = sem;
+diff --git a/src/main.cpp b/src/main.cpp
+index d8693ef..e61d06a 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -3,13 +3,67 @@
+ #include "../h/scheduler.hpp"
+ #include "../h/sys.hpp"
+ #include "../h/syscall_c.h"
++#include "../h/syscall_cpp.hpp"
+ #include "../h/thread.hpp"
+ #include "../test/userMain.hpp"
+ 
+ static volatile bool isUserThreadFinished = false;
+ 
++static volatile bool syncDoneA = false;
++static volatile bool syncDoneB = false;
++
++class SyncWorker : public Thread {
++	char name;
++	bool slow;
++
++  public:
++	SyncWorker(char name, bool slow) : Thread(), name(name), slow(slow) {}
++
++	void run() override {
++		for (int i = 0; i < 3; i++) {
++			if (slow)
++				Thread::sleep(1);
++
++			kernel::console::print(name);
++			kernel::console::print(" reached barrier ");
++			kernel::console::print(i);
++			kernel::console::print("\n");
++
++			sync();
++
++			kernel::console::print(name);
++			kernel::console::print(" passed barrier ");
++			kernel::console::print(i);
++			kernel::console::print("\n");
++		}
++
++		kernel::console::print(name);
++		kernel::console::print(" finished\n");
++		if (name == 'A')
++			syncDoneA = true;
++		else
++			syncDoneB = true;
++	}
++};
++
++void syncTest() {
++	SyncWorker* a = new SyncWorker('A', false);
++	SyncWorker* b = new SyncWorker('B', true);
++
++	a->start();
++	b->start();
++
++	Thread::pair(a, b);
++
++	while (!(syncDoneA && syncDoneB))
++		Thread::dispatch();
++
++	delete a;
++	delete b;
++}
++
+ void user(void*) {
+-	userMain();
++	syncTest();
+ 	isUserThreadFinished = true;
+ }
+ 
+diff --git a/src/syscall_c.cpp b/src/syscall_c.cpp
+index 998346c..b54f35d 100644
+--- a/src/syscall_c.cpp
++++ b/src/syscall_c.cpp
+@@ -46,6 +46,18 @@ void thread_dispatch() {
+ 	ecall();
+ }
+ 
++void thread_sync() {
++	A0::write((uint64)SyscallCode::ThreadSync);
++	ecall();
++}
++
++void thread_pair(thread_t t1, thread_t t2) {
++	A0::write((uint64)SyscallCode::ThreadPair);
++	A1::write((uint64)t1);
++	A2::write((uint64)t2);
++	ecall();
++}
++
+ int time_sleep(time_t period) {
+ 	A0::write((uint64)SyscallCode::ThreadSleep);
+ 	A1::write((uint64)period);
+diff --git a/src/syscall_cpp.cpp b/src/syscall_cpp.cpp
+index add0285..8c6b9e4 100644
+--- a/src/syscall_cpp.cpp
++++ b/src/syscall_cpp.cpp
+@@ -23,6 +23,14 @@ int Thread::start() {
+ 	return thread_create(&myHandle, &Thread::runWrapper, this);
+ }
+ 
++void Thread::pair(Thread* t1, Thread* t2) {
++	thread_pair(t1->myHandle, t2->myHandle);
++}
++
++void Thread::sync() {
++	thread_sync();
++}
++
+ void Thread::dispatch() { thread_dispatch(); }
+ 
+ int Thread::sleep(time_t period) { return time_sleep(period); }
+diff --git a/src/thread.cpp b/src/thread.cpp
+index 7e1fc4b..942a5c2 100644
+--- a/src/thread.cpp
++++ b/src/thread.cpp
+@@ -10,7 +10,7 @@ Thread* Thread::running = nullptr;
+ uint64 Thread::ticks = 0;
+ 
+ Thread::Thread(Function function, void* arg, void* stack_space, bool privileged)
+-	: finished(false), stack(nullptr), function(function), arg(arg) {
++	: finished(false), other(nullptr), sync(new Semaphore(0)), stack(nullptr), function(function), arg(arg) {
+ 	if (!function)
+ 		return;
+ 
+@@ -23,7 +23,7 @@ Thread::Thread(Function function, void* arg, void* stack_space, bool privileged)
+ }
+ 
+ Thread::Thread(Function function, void* arg, bool privileged)
+-	: finished(false), stack(nullptr), function(function), arg(arg) {
++	: finished(false), other(nullptr), sync(new Semaphore(0)), stack(nullptr), function(function), arg(arg) {
+ 	if (!function)
+ 		return;
+ 
+@@ -38,7 +38,7 @@ Thread::Thread(Function function, void* arg, bool privileged)
+ }
+ 
+ Thread::Thread()
+-	: finished(false), stack(nullptr), function(nullptr), arg(nullptr),
++	: finished(false), other(nullptr), sync(new Semaphore(0)), stack(nullptr), function(nullptr), arg(nullptr),
+ 	  context({.ra = 0, .sp = 0}) {}
+ 
+ Thread::~Thread() { MemoryAllocator::getInstance().free((size_t)stack); }

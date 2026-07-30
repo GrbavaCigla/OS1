@@ -1,0 +1,256 @@
+diff --git a/h/sys.hpp b/h/sys.hpp
+index 03aa7b4..4bc0266 100644
+--- a/h/sys.hpp
++++ b/h/sys.hpp
+@@ -60,6 +60,8 @@ enum class SyscallCode : uint64 {
+ 	ThreadCreate = 0x11,
+ 	ThreadExit = 0x12,
+ 	ThreadDispatch = 0x13,
++	ThreadSend = 0x14,
++	ThreadReceive = 0x15,
+ 	ThreadSleep = 0x31,
+ 	SemaphoreOpen = 0x21,
+ 	SemaphoreClose = 0x22,
+diff --git a/h/syscall_c.h b/h/syscall_c.h
+index 2aab9f9..4c8ccb2 100644
+--- a/h/syscall_c.h
++++ b/h/syscall_c.h
+@@ -25,6 +25,10 @@ int thread_exit();
+ 
+ void thread_dispatch();
+ 
++void send(thread_t, char*);
++
++char* receive(thread_t);
++
+ int time_sleep(time_t);
+ 
+ int sem_open(sem_t*, unsigned);
+diff --git a/h/syscall_cpp.hpp b/h/syscall_cpp.hpp
+index 1fe1215..4589218 100644
+--- a/h/syscall_cpp.hpp
++++ b/h/syscall_cpp.hpp
+@@ -17,6 +17,8 @@ class Thread {
+ 	int start();
+ 	static void dispatch();
+ 	static int sleep(time_t);
++	void send(char*);
++	char* receive();
+ 
+   protected:
+ 	Thread();
+diff --git a/h/thread.hpp b/h/thread.hpp
+index dc2b76e..e296c57 100644
+--- a/h/thread.hpp
++++ b/h/thread.hpp
+@@ -24,6 +24,9 @@ class Thread {
+ 	static void operator delete[](void*) noexcept;
+ 
+ 	bool finished;
++	Semaphore* spaceAvailable;
++	Semaphore* dataAvailable;
++	char* message;
+ 
+ 	struct Context {
+ 		uint64 ra;
+diff --git a/h/trap.hpp b/h/trap.hpp
+index ce4d39e..376712e 100644
+--- a/h/trap.hpp
++++ b/h/trap.hpp
+@@ -66,6 +66,20 @@ inline uint64 handleSyscall(uint64 code, uint64* args) {
+ 		}
+ 		console::outputBuffer->put(args[0]);
+ 		break;
++	case SyscallCode::ThreadSend: {
++		Thread* receiver = (Thread*)args[0];
++		receiver->spaceAvailable->wait();
++		receiver->message = (char*)args[1];
++		receiver->dataAvailable->signal();
++		break;
++	}
++	case SyscallCode::ThreadReceive: {
++		Thread* receiver = Thread::running;
++		receiver->dataAvailable->wait();
++		ret = (uint64)receiver->message;
++		receiver->spaceAvailable->signal();
++		break;
++	}
+ 	}
+ 
+ 	return ret;
+diff --git a/src/main.cpp b/src/main.cpp
+index d8693ef..26b776f 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -3,13 +3,94 @@
+ #include "../h/scheduler.hpp"
+ #include "../h/sys.hpp"
+ #include "../h/syscall_c.h"
++#include "../h/syscall_cpp.hpp"
+ #include "../h/thread.hpp"
+ #include "../test/userMain.hpp"
+ 
+ static volatile bool isUserThreadFinished = false;
+ 
++static volatile bool doneA = false;
++static volatile bool doneB = false;
++static volatile bool doneC = false;
++
++class MsgThreadA;
++class MsgThreadB;
++class MsgThreadC;
++
++static Thread* ta = nullptr;
++static Thread* tb = nullptr;
++static Thread* tc = nullptr;
++
++class MsgThreadA : public Thread {
++  public:
++	MsgThreadA() : Thread() {}
++	void run() override {
++		for (int i = 0; i < 5; i++) {
++			tb->send((char*)"Nit A -> Nit B\n");
++			tc->send((char*)"Nit A -> Nit C\n");
++			const char* m = receive();
++			kernel::console::print(m);
++		}
++		kernel::console::print("Nit A zavrsila\n");
++		doneA = true;
++	}
++};
++
++class MsgThreadB : public Thread {
++  public:
++	MsgThreadB() : Thread() {}
++	void run() override {
++		for (int i = 0; i < 5; i++) {
++			tc->send((char*)"Nit B -> Nit C #1\n");
++			tc->send((char*)"Nit B -> Nit C #2\n");
++			// B is sent one message by A and one by C each iteration,
++			// so it must receive twice to stay balanced (else deadlock).
++			for (int j = 0; j < 2; j++) {
++				const char* m = receive();
++				kernel::console::print(m);
++			}
++		}
++		kernel::console::print("Nit B zavrsila\n");
++		doneB = true;
++	}
++};
++
++class MsgThreadC : public Thread {
++  public:
++	MsgThreadC() : Thread() {}
++	void run() override {
++		for (int i = 0; i < 5; i++) {
++			for (int j = 0; j < 3; j++) {
++				const char* m = receive();
++				kernel::console::print(m);
++			}
++			tb->send((char*)"Nit C -> Nit B\n");
++			ta->send((char*)"Nit C -> Nit A\n");
++		}
++		kernel::console::print("Nit C zavrsila\n");
++		doneC = true;
++	}
++};
++
++void messageTest() {
++	ta = new MsgThreadA();
++	tb = new MsgThreadB();
++	tc = new MsgThreadC();
++
++	ta->start();
++	tb->start();
++	tc->start();
++
++	while (!(doneA && doneB && doneC))
++		Thread::dispatch();
++
++	delete ta;
++	delete tb;
++	delete tc;
++}
++
+ void user(void*) {
+-	userMain();
++	messageTest();
+ 	isUserThreadFinished = true;
+ }
+ 
+diff --git a/src/syscall_c.cpp b/src/syscall_c.cpp
+index 998346c..194a880 100644
+--- a/src/syscall_c.cpp
++++ b/src/syscall_c.cpp
+@@ -46,6 +46,21 @@ void thread_dispatch() {
+ 	ecall();
+ }
+ 
++void send(thread_t handle, char* message) {
++	A0::write((uint64)SyscallCode::ThreadSend);
++	A1::write((uint64)handle);
++	A2::write((uint64)message);
++	ecall();
++}
++
++char* receive(thread_t handle) {
++	A0::write((uint64)SyscallCode::ThreadReceive);
++	A1::write((uint64)handle);
++	ecall();
++	return (char*)A0::read();
++}
++
++
+ int time_sleep(time_t period) {
+ 	A0::write((uint64)SyscallCode::ThreadSleep);
+ 	A1::write((uint64)period);
+diff --git a/src/syscall_cpp.cpp b/src/syscall_cpp.cpp
+index add0285..1949385 100644
+--- a/src/syscall_cpp.cpp
++++ b/src/syscall_cpp.cpp
+@@ -25,6 +25,14 @@ int Thread::start() {
+ 
+ void Thread::dispatch() { thread_dispatch(); }
+ 
++void Thread::send(char* message) {
++	::send(this->myHandle, message);
++}
++
++char* Thread::receive() {
++	return ::receive(this->myHandle);
++}
++
+ int Thread::sleep(time_t period) { return time_sleep(period); }
+ 
+ Semaphore::Semaphore(unsigned init) : myHandle(nullptr) {
+diff --git a/src/thread.cpp b/src/thread.cpp
+index 7e1fc4b..6df003c 100644
+--- a/src/thread.cpp
++++ b/src/thread.cpp
+@@ -10,7 +10,7 @@ Thread* Thread::running = nullptr;
+ uint64 Thread::ticks = 0;
+ 
+ Thread::Thread(Function function, void* arg, void* stack_space, bool privileged)
+-	: finished(false), stack(nullptr), function(function), arg(arg) {
++	: finished(false), spaceAvailable(new Semaphore(1)), dataAvailable(new Semaphore(0)), message(nullptr), stack(nullptr), function(function), arg(arg) {
+ 	if (!function)
+ 		return;
+ 
+@@ -23,7 +23,7 @@ Thread::Thread(Function function, void* arg, void* stack_space, bool privileged)
+ }
+ 
+ Thread::Thread(Function function, void* arg, bool privileged)
+-	: finished(false), stack(nullptr), function(function), arg(arg) {
++	: finished(false), spaceAvailable(new Semaphore(1)), dataAvailable(new Semaphore(0)), message(nullptr), stack(nullptr), function(function), arg(arg) {
+ 	if (!function)
+ 		return;
+ 
+@@ -38,7 +38,7 @@ Thread::Thread(Function function, void* arg, bool privileged)
+ }
+ 
+ Thread::Thread()
+-	: finished(false), stack(nullptr), function(nullptr), arg(nullptr),
++	: finished(false), spaceAvailable(new Semaphore(1)), dataAvailable(new Semaphore(0)), message(nullptr), stack(nullptr), function(nullptr), arg(nullptr),
+ 	  context({.ra = 0, .sp = 0}) {}
+ 
+ Thread::~Thread() { MemoryAllocator::getInstance().free((size_t)stack); }
